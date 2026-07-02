@@ -1,0 +1,78 @@
+@import "tailwindcss";
+
+:root {
+  --color-paper: #f3f1ea;
+  --color-paper-deep: #eae6d9;
+  --color-ink: #1e2321;
+  --color-ink-soft: #5b5a50;
+  --color-ink-faint: #8a8578;
+  --color-line: #e2ded2;
+  --color-card: #ffffff;
+
+  --color-accent: #2b3a67;
+  --color-accent-soft: #e7e9f1;
+
+  --color-income: #3f7d58;
+  --color-income-soft: #e5efe8;
+  --color-expense: #b4552f;
+  --color-expense-soft: #f5e7df;
+  --color-pending: #b98a1e;
+  --color-pending-soft: #f7efda;
+
+  --color-cat-1: #2b3a67;
+  --color-cat-2: #b4552f;
+  --color-cat-3: #3f7d58;
+  --color-cat-4: #b98a1e;
+  --color-cat-5: #6e5b8c;
+  --color-cat-6: #8a8578;
+}
+
+@theme inline {
+  --color-paper: var(--color-paper);
+  --color-paper-deep: var(--color-paper-deep);
+  --color-ink: var(--color-ink);
+  --color-ink-soft: var(--color-ink-soft);
+  --color-ink-faint: var(--color-ink-faint);
+  --color-line: var(--color-line);
+  --color-card: var(--color-card);
+
+  --color-accent: var(--color-accent);
+  --color-accent-soft: var(--color-accent-soft);
+
+  --color-income: var(--color-income);
+  --color-income-soft: var(--color-income-soft);
+  --color-expense: var(--color-expense);
+  --color-expense-soft: var(--color-expense-soft);
+  --color-pending: var(--color-pending);
+  --color-pending-soft: var(--color-pending-soft);
+
+  --color-cat-1: var(--color-cat-1);
+  --color-cat-2: var(--color-cat-2);
+  --color-cat-3: var(--color-cat-3);
+  --color-cat-4: var(--color-cat-4);
+  --color-cat-5: var(--color-cat-5);
+  --color-cat-6: var(--color-cat-6);
+
+  --font-serif: "Iowan Old Style", "PT Serif", Georgia, "Times New Roman", serif;
+  --font-sans: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo, Consolas, monospace;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+.tabular {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
