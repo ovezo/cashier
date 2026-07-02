@@ -39,9 +39,9 @@ export function BottomNav() {
       <Link
         href="/add"
         aria-label="Add transaction"
-        className="-mt-6 flex h-11 w-11 items-center justify-center rounded-full bg-accent text-white shadow-lg shadow-accent/30"
+        className="-mt-9 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-accent text-white shadow-lg shadow-accent/40 ring-4 ring-card"
       >
-        <Plus size={22} />
+        <Plus size={28} strokeWidth={2.2} />
       </Link>
       {itemsRight.map(renderItem)}
     </nav>

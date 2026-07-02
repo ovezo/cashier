@@ -91,8 +91,8 @@ export function TransactionForm({ existing }: { existing?: Transaction }) {
         />
       </div>
 
-      <div className="mt-5 flex items-baseline gap-2 border-b border-line pb-3.5">
-        <span className="rounded-lg bg-paper-deep px-2.5 py-1.5 font-mono text-sm text-ink-soft">
+      <div className="mt-5 flex items-center gap-2 border-b border-line pb-3.5">
+        <span className="shrink-0 whitespace-nowrap rounded-lg bg-paper-deep px-2.5 py-1.5 font-mono text-sm text-ink-soft">
           {account?.currency ?? ""} {currencySymbol(account?.currency ?? "")}
         </span>
         <input
