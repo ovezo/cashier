@@ -4,7 +4,7 @@ import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { useCashierStore } from "@/lib/store";
-import { formatAmount, formatDate, todayIso } from "@/lib/format";
+import { formatAmount, formatDate, sanitizeDecimalInput, todayIso } from "@/lib/format";
 import { frequencyLabel } from "@/lib/recurring";
 import { Chip } from "@/components/ui/Chip";
 import { Button } from "@/components/ui/Button";
@@ -75,7 +75,7 @@ export default function DebtDetailPage({ params }: { params: Promise<{ id: strin
         <div className="mt-4">
           <Label>Record a {verb} amount</Label>
           <div className="flex gap-2">
-            <TextInput inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))} placeholder="0.00" />
+            <TextInput inputMode="decimal" value={amount} onChange={(e) => setAmount(sanitizeDecimalInput(e.target.value))} placeholder="0.00" />
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="rounded-xl border border-line bg-card px-2.5 text-xs" />
           </div>
           <div className="mt-2.5">

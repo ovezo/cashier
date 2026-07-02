@@ -85,11 +85,21 @@ export const useCashierStore = create<CashierState>()(
         }),
 
       setPrimaryAccount: (id) =>
-        set((s) => ({
-          accounts: s.accounts.map((a) =>
-            a.id === id ? { ...a, isPrimary: true, exchangeRateToPrimary: 1 } : { ...a, isPrimary: false }
-          ),
-        })),
+        set((s) => {
+          const newPrimary = s.accounts.find((a) => a.id === id);
+          if (!newPrimary || newPrimary.isPrimary) return s;
+          // newPrimary.exchangeRateToPrimary is currently "1 newPrimary = x oldPrimary".
+          // Every other account's rate was expressed relative to the old primary, so
+          // re-express each one relative to the new primary: rateToNewPrimary = rateToOldPrimary / x.
+          const oldPrimaryPerNewPrimary = newPrimary.exchangeRateToPrimary || 1;
+          return {
+            accounts: s.accounts.map((a) => {
+              if (a.id === id) return { ...a, isPrimary: true, exchangeRateToPrimary: 1 };
+              const rebased = a.exchangeRateToPrimary / oldPrimaryPerNewPrimary;
+              return { ...a, isPrimary: false, exchangeRateToPrimary: Math.round(rebased * 1e6) / 1e6 };
+            }),
+          };
+        }),
 
       addCategory: (input) => set((s) => ({ categories: [...s.categories, { ...input, id: createId() }] })),
 

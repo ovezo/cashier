@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { useCashierStore } from "@/lib/store";
-import { todayIso } from "@/lib/format";
+import { sanitizeDecimalInput, todayIso } from "@/lib/format";
 import { frequencyLabel } from "@/lib/recurring";
 import type { DebtDirection, Frequency } from "@/lib/types";
 import { Segmented } from "@/components/ui/Segmented";
@@ -82,7 +82,7 @@ export function DebtForm() {
 
       <div className="mt-4">
         <Label>Principal amount</Label>
-        <TextInput inputMode="decimal" value={principal} onChange={(e) => setPrincipal(e.target.value.replace(/[^0-9.]/g, ""))} placeholder="0.00" />
+        <TextInput inputMode="decimal" value={principal} onChange={(e) => setPrincipal(sanitizeDecimalInput(e.target.value))} placeholder="0.00" />
       </div>
 
       <div className="mt-4">
@@ -110,7 +110,7 @@ export function DebtForm() {
         <div className="mt-3 flex flex-col gap-2.5">
           <div>
             <Label>Instalment amount</Label>
-            <TextInput inputMode="decimal" value={instalment} onChange={(e) => setInstalment(e.target.value.replace(/[^0-9.]/g, ""))} placeholder={principal || "0.00"} />
+            <TextInput inputMode="decimal" value={instalment} onChange={(e) => setInstalment(sanitizeDecimalInput(e.target.value))} placeholder={principal || "0.00"} />
           </div>
           <div>
             <Label>Frequency</Label>

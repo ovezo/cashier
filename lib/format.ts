@@ -4,6 +4,9 @@ const symbolByCurrency: Record<string, string> = {
   EUR: "€",
   TRY: "₺",
   JPY: "¥",
+  AED: "د.إ",
+  CNY: "¥",
+  INR: "₹",
 };
 
 export function currencySymbol(currency: string): string {
@@ -42,6 +45,18 @@ export function formatDateShort(iso: string): string {
 
 export function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+/**
+ * Normalizes free-typed numeric input into a plain decimal string: accepts
+ * either "." or "," as the decimal separator (many keyboards/locales produce
+ * a comma), strips everything else, and keeps only the first separator.
+ */
+export function sanitizeDecimalInput(raw: string): string {
+  const normalized = raw.replace(/,/g, ".").replace(/[^0-9.]/g, "");
+  const firstDot = normalized.indexOf(".");
+  if (firstDot === -1) return normalized;
+  return normalized.slice(0, firstDot + 1) + normalized.slice(firstDot + 1).replace(/\./g, "");
 }
 
 export function relativeDayLabel(iso: string): string {

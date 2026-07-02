@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { useCashierStore } from "@/lib/store";
-import { currencySymbol, todayIso } from "@/lib/format";
+import { currencySymbol, sanitizeDecimalInput, todayIso } from "@/lib/format";
 import { frequencyLabel } from "@/lib/recurring";
 import type { Frequency, Transaction, TxType } from "@/lib/types";
 import { Segmented } from "@/components/ui/Segmented";
@@ -99,7 +99,7 @@ export function TransactionForm({ existing }: { existing?: Transaction }) {
           inputMode="decimal"
           placeholder="0.00"
           value={amount}
-          onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
+          onChange={(e) => setAmount(sanitizeDecimalInput(e.target.value))}
           className="w-full bg-transparent font-mono text-4xl font-semibold tabular-nums outline-none placeholder:text-ink-faint/50"
         />
       </div>

@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { useCashierStore } from "@/lib/store";
-import { todayIso } from "@/lib/format";
+import { sanitizeDecimalInput, todayIso } from "@/lib/format";
 import { frequencyLabel } from "@/lib/recurring";
 import type { Frequency, TxType } from "@/lib/types";
 import { Segmented } from "@/components/ui/Segmented";
@@ -74,7 +74,7 @@ export function RecurringForm() {
 
       <div className="mt-4">
         <Label>Amount per cycle</Label>
-        <TextInput inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))} placeholder="0.00" />
+        <TextInput inputMode="decimal" value={amount} onChange={(e) => setAmount(sanitizeDecimalInput(e.target.value))} placeholder="0.00" />
       </div>
 
       <div className="mt-4">

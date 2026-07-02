@@ -6,6 +6,7 @@ import { X } from "lucide-react";
 import { useCashierStore } from "@/lib/store";
 import type { Account } from "@/lib/types";
 import { COMMON_CURRENCIES } from "@/lib/currencies";
+import { sanitizeDecimalInput } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
 import { Label, SelectInput, TextInput } from "@/components/ui/Field";
 
@@ -63,7 +64,7 @@ export function AccountForm({ existing }: { existing?: Account }) {
       {!isPrimary && (
         <div className="mt-4">
           <Label>Exchange rate → {primary?.currency ?? "primary"}</Label>
-          <TextInput inputMode="decimal" value={rate} onChange={(e) => setRate(e.target.value.replace(/[^0-9.]/g, ""))} placeholder="0.79" />
+          <TextInput inputMode="decimal" value={rate} onChange={(e) => setRate(sanitizeDecimalInput(e.target.value))} placeholder="0.79" />
           <p className="mt-2 text-[11.5px] leading-relaxed text-ink-faint">
             1 {currency} = {rate || "0"} {primary?.currency ?? ""}. Set this manually and update it whenever you like.
           </p>
