@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { X } from "lucide-react";
 import { useCashierStore } from "@/lib/store";
 import { sanitizeDecimalInput, todayIso } from "@/lib/format";
@@ -16,12 +16,13 @@ const frequencies: Frequency[] = ["daily", "weekly", "biweekly", "monthly", "yea
 
 export function DebtForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const accounts = useCashierStore((s) => s.accounts);
   const addDebt = useCashierStore((s) => s.addDebt);
   const addRecurringRule = useCashierStore((s) => s.addRecurringRule);
   const updateDebt = useCashierStore((s) => s.updateDebt);
 
-  const [direction, setDirection] = useState<DebtDirection>("owed_to_me");
+  const [direction, setDirection] = useState<DebtDirection>(searchParams.get("direction") === "i_owe" ? "i_owe" : "owed_to_me");
   const [person, setPerson] = useState("");
   const [principal, setPrincipal] = useState("");
   const [accountId, setAccountId] = useState("");
@@ -62,7 +63,7 @@ export function DebtForm() {
       updateDebt(debtId, { recurringId: ruleId });
     }
 
-    router.push("/debts");
+    router.push(`/debts?tab=${direction}`);
   }
 
   return (

@@ -38,7 +38,7 @@ function DebtsPageContent() {
     <div className="px-4 pb-8 pt-5">
       <div className="flex items-center justify-between">
         <h1 className="font-serif text-xl font-semibold">Debts</h1>
-        <Link href="/debts/new" className="text-[13px] font-semibold text-accent">
+        <Link href={`/debts/new?direction=${tab}`} className="text-[13px] font-semibold text-accent">
           + Add
         </Link>
       </div>
