@@ -104,7 +104,7 @@ export default function DebtDetailPage({ params }: { params: Promise<{ id: strin
       <button
         onClick={() => {
           deleteDebt(debt.id);
-          router.push("/debts");
+          router.push(`/debts?tab=${debt.direction}`);
         }}
         className="mt-6 w-full text-center text-[13px] font-semibold text-expense"
       >
