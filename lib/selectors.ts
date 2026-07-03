@@ -66,6 +66,9 @@ export function monthBoundsOffset(offset: number): { start: string; end: string 
   return { start: start.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10) };
 }
 
+/** A transaction can carry more than one category tag (e.g. "Groceries" + "Work"), so it's
+ * attributed in full to each of its tags rather than split between them — percentages are
+ * against total spend/income for the period, so they needn't add up to 100% when tags overlap. */
 export function categoryBreakdown(
   transactions: Transaction[],
   categories: import("./types").Category[],
@@ -76,13 +79,15 @@ export function categoryBreakdown(
 ) {
   const accountById = new Map(accounts.map((a) => [a.id, a]));
   const totals = new Map<string, number>();
+  let periodTotal = 0;
   for (const t of transactions) {
     if (t.status !== "confirmed" || t.type !== type || t.date < from || t.date > to) continue;
-    if (!t.categoryId) continue;
     const converted = toPrimary(t.amount, accountById.get(t.accountId));
-    totals.set(t.categoryId, (totals.get(t.categoryId) ?? 0) + converted);
+    periodTotal += converted;
+    for (const categoryId of t.categoryIds ?? []) {
+      totals.set(categoryId, (totals.get(categoryId) ?? 0) + converted);
+    }
   }
-  const grandTotal = [...totals.values()].reduce((s, v) => s + v, 0);
   const rows = [...totals.entries()]
     .map(([categoryId, amount]) => {
       const category = categories.find((c) => c.id === categoryId);
@@ -91,9 +96,9 @@ export function categoryBreakdown(
         name: category?.name ?? "Uncategorised",
         icon: category?.icon ?? "⋯",
         amount,
-        pct: grandTotal > 0 ? (amount / grandTotal) * 100 : 0,
+        pct: periodTotal > 0 ? (amount / periodTotal) * 100 : 0,
       };
     })
     .sort((a, b) => b.amount - a.amount);
-  return { rows, grandTotal };
+  return { rows, grandTotal: periodTotal };
 }

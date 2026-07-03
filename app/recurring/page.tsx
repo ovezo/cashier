@@ -40,7 +40,7 @@ export default function RecurringPage() {
       <div className="rounded-2xl border border-line bg-card">
         {rules.map((r) => {
           const account = accounts.find((a) => a.id === r.accountId);
-          const category = categories.find((c) => c.id === r.categoryId);
+          const category = categories.find((c) => c.id === r.categoryIds?.[0]);
           const debt = r.linkedDebtId ? debts.find((d) => d.id === r.linkedDebtId) : undefined;
           const name = r.note || category?.name || (debt ? `Instalment · ${debt.person}` : "Recurring");
           const isIncome = r.kind === "transaction" ? r.txType === "income" : debt?.direction === "owed_to_me";

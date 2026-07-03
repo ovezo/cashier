@@ -39,7 +39,7 @@ export default function TransactionsPage() {
     return transactions.filter((t) => {
       if (t.status !== "confirmed") return false;
       if (t.date < from || t.date > to) return false;
-      if (categoryId !== "all" && t.categoryId !== categoryId) return false;
+      if (categoryId !== "all" && !t.categoryIds?.includes(categoryId)) return false;
       if (accountId !== "all" && t.accountId !== accountId && t.toAccountId !== accountId) return false;
       return true;
     });
@@ -70,9 +70,9 @@ export default function TransactionsPage() {
 
       {range === "custom" && (
         <div className="mt-2.5 flex items-center gap-2">
-          <input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} className="w-full rounded-lg border border-line bg-card px-2.5 py-2 text-xs" />
+          <input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} className="w-full rounded-lg border border-line bg-card px-2.5 py-2 text-base" />
           <span className="text-ink-faint">–</span>
-          <input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} className="w-full rounded-lg border border-line bg-card px-2.5 py-2 text-xs" />
+          <input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} className="w-full rounded-lg border border-line bg-card px-2.5 py-2 text-base" />
         </div>
       )}
 

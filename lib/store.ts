@@ -247,7 +247,7 @@ export const useCashierStore = create<CashierState>()(
                 type: rule.txType ?? "expense",
                 amount: rule.amount,
                 accountId: rule.accountId,
-                categoryId: rule.categoryId,
+                categoryIds: rule.categoryIds,
                 note: rule.note,
                 date: dueDate,
                 status: "pending",

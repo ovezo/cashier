@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { useCashierStore } from "@/lib/store";
@@ -12,6 +12,7 @@ import { Segmented } from "@/components/ui/Segmented";
 import { Switch } from "@/components/ui/Switch";
 import { Button } from "@/components/ui/Button";
 import { SelectInput } from "@/components/ui/Field";
+import { CategoryPicker } from "@/components/categories/CategoryPicker";
 
 const frequencies: Frequency[] = ["daily", "weekly", "biweekly", "monthly", "yearly"];
 
@@ -37,14 +38,15 @@ export function TransactionForm({ existing }: { existing?: Transaction }) {
   const [toAccountId, setToAccountId] = useState(existing?.toAccountId ?? "");
   const [manualRate, setManualRate] = useState(existing?.type === "transfer" && existing.amount ? String(existing.toAmount! / existing.amount) : "");
   const [rateTouched, setRateTouched] = useState(Boolean(existing));
-  const [categoryId, setCategoryId] = useState(existing?.categoryId ?? "");
+  const [categoryIds, setCategoryIds] = useState<string[]>(existing?.categoryIds ?? []);
   const [date, setDate] = useState(existing?.date ?? todayIso());
   const [note, setNote] = useState(existing?.note ?? "");
   const [recurring, setRecurring] = useState(false);
   const [frequency, setFrequency] = useState<Frequency>("monthly");
 
-  const categoriesForType = useMemo(() => categories.filter((c) => c.type === type), [categories, type]);
-  const currentCategoryId = categoriesForType.some((c) => c.id === categoryId) ? categoryId : "";
+  function toggleCategory(id: string) {
+    setCategoryIds((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
+  }
 
   // `accounts` is empty until hydration + seeding finish (both async). Rather than capturing
   // whatever was in the store at mount time, resolve the default at render time so it
@@ -74,7 +76,7 @@ export function TransactionForm({ existing }: { existing?: Transaction }) {
         toAmount: receiveAmount,
         note,
         date,
-        categoryId: undefined,
+        categoryIds: undefined,
       };
       if (existing) {
         updateTransaction(existing.id, payload);
@@ -90,7 +92,7 @@ export function TransactionForm({ existing }: { existing?: Transaction }) {
     if (!numeric || numeric <= 0 || !resolvedAccountId) return;
 
     if (existing) {
-      updateTransaction(existing.id, { type, amount: numeric, accountId: resolvedAccountId, categoryId: currentCategoryId || undefined, date, note });
+      updateTransaction(existing.id, { type, amount: numeric, accountId: resolvedAccountId, categoryIds: categoryIds.length ? categoryIds : undefined, date, note });
       router.back();
       return;
     }
@@ -103,14 +105,14 @@ export function TransactionForm({ existing }: { existing?: Transaction }) {
         nextDueDate: date,
         amount: numeric,
         accountId: resolvedAccountId,
-        categoryId: currentCategoryId || undefined,
+        categoryIds: categoryIds.length ? categoryIds : undefined,
         note,
         active: true,
         txType: type,
       });
       generatePending();
     } else {
-      addTransaction({ type, amount: numeric, accountId: resolvedAccountId, categoryId: currentCategoryId || undefined, date, note });
+      addTransaction({ type, amount: numeric, accountId: resolvedAccountId, categoryIds: categoryIds.length ? categoryIds : undefined, date, note });
     }
     router.push("/transactions");
   }
@@ -132,7 +134,7 @@ export function TransactionForm({ existing }: { existing?: Transaction }) {
           value={type}
           onChange={(v) => {
             setType(v);
-            setCategoryId("");
+            setCategoryIds([]);
             if (v !== "transfer") setRecurring(false);
           }}
           options={
@@ -237,28 +239,11 @@ export function TransactionForm({ existing }: { existing?: Transaction }) {
 
       {type !== "transfer" && (
         <>
-          <div className="mt-4 mb-2 text-[11px] font-bold uppercase tracking-wide text-ink-faint">Category</div>
-          <div className="grid grid-cols-4 gap-2.5">
-            {categoriesForType.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => setCategoryId(c.id)}
-                className={`flex flex-col items-center gap-1.5 rounded-xl border p-2.5 text-center text-[10.5px] ${
-                  currentCategoryId === c.id
-                    ? type === "expense"
-                      ? "border-expense bg-expense-soft text-expense"
-                      : "border-income bg-income-soft text-income"
-                    : "border-line bg-card text-ink-soft"
-                }`}
-              >
-                <span className={`flex h-8 w-8 items-center justify-center rounded-lg text-[15px] ${currentCategoryId === c.id ? "bg-white" : "bg-paper-deep"}`}>
-                  {c.icon}
-                </span>
-                {c.name}
-              </button>
-            ))}
+          <div className="mt-4 mb-2 flex items-baseline justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wide text-ink-faint">Category</span>
+            <span className="text-[10.5px] text-ink-faint">Pick as many as apply</span>
           </div>
+          <CategoryPicker categories={categories} type={type} selectedIds={categoryIds} onToggle={toggleCategory} />
         </>
       )}
 
@@ -268,7 +253,7 @@ export function TransactionForm({ existing }: { existing?: Transaction }) {
         onChange={(e) => setNote(e.target.value)}
         placeholder="Add a note (optional)"
         rows={2}
-        className="w-full resize-none rounded-xl border border-line bg-card px-3.5 py-3 text-sm text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none"
+        className="w-full resize-none rounded-xl border border-line bg-card px-3.5 py-3 text-base text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none"
       />
 
       {!existing && type !== "transfer" && (

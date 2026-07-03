@@ -6,12 +6,12 @@ import type { Transaction } from "@/lib/types";
 
 export function PendingCard({ tx }: { tx: Transaction }) {
   const account = useCashierStore((s) => s.accounts.find((a) => a.id === tx.accountId));
-  const category = useCashierStore((s) => s.categories.find((c) => c.id === tx.categoryId));
+  const firstCategory = useCashierStore((s) => s.categories.find((c) => c.id === tx.categoryIds?.[0]));
   const debt = useCashierStore((s) => (tx.linkedDebtId ? s.debts.find((d) => d.id === tx.linkedDebtId) : undefined));
   const confirmTransaction = useCashierStore((s) => s.confirmTransaction);
   const skipTransaction = useCashierStore((s) => s.skipTransaction);
 
-  const label = tx.note || category?.name || (debt ? `Instalment · ${debt.person}` : "Recurring item");
+  const label = tx.note || firstCategory?.name || (debt ? `Instalment · ${debt.person}` : "Recurring item");
   const overdue = tx.date < todayIso();
   const confirmLabel = tx.type === "income" ? "Confirm received" : "Confirm paid";
 

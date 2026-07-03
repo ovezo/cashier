@@ -8,7 +8,7 @@ export function TextInput(props: InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       {...props}
-      className={`w-full rounded-xl border border-line bg-card px-3.5 py-3 text-sm text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none ${props.className ?? ""}`}
+      className={`w-full rounded-xl border border-line bg-card px-3.5 py-3 text-base text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none ${props.className ?? ""}`}
     />
   );
 }
@@ -17,7 +17,7 @@ export function SelectInput(props: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <select
       {...props}
-      className={`w-full rounded-xl border border-line bg-card px-3.5 py-3 text-sm text-ink focus:border-accent focus:outline-none ${props.className ?? ""}`}
+      className={`w-full rounded-xl border border-line bg-card px-3.5 py-3 text-base text-ink focus:border-accent focus:outline-none ${props.className ?? ""}`}
     />
   );
 }

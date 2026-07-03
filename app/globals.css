@@ -69,6 +69,21 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* iOS Safari zooms the page in when a focused field's font-size is under 16px. This is a
+ * baseline for any input/select/textarea that doesn't set its own (larger) text size —
+ * an explicit Tailwind text-size class on the element still wins over this. */
+input, select, textarea {
+  font-size: 16px;
+}
+
+/* iOS Safari's native date input can render wider than the box it's styled to fill. */
+input[type="date"] {
+  width: 100%;
+  max-width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

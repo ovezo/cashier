@@ -32,7 +32,10 @@ export default function DebtDetailPage({ params }: { params: Promise<{ id: strin
   const lendLabel = debt.direction === "owed_to_me" ? "Lend more" : "Borrow more";
   const repaymentLabel = debt.direction === "owed_to_me" ? "Record received" : "Record repayment";
 
-  const history = [...debt.entries].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+  // Entries only carry a day-level date, so two same-day entries can't be told apart by date
+  // alone — reverse to most-recently-added-first, then stably sort by date descending so
+  // newest activity is always on top, even among same-day entries.
+  const history = [...debt.entries].reverse().sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
 
   return (
     <div className="px-4 pb-8 pt-2">

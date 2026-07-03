@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { useCashierStore } from "@/lib/store";
@@ -10,6 +10,7 @@ import type { Frequency, TxType } from "@/lib/types";
 import { Segmented } from "@/components/ui/Segmented";
 import { Button } from "@/components/ui/Button";
 import { Label, SelectInput, TextInput } from "@/components/ui/Field";
+import { CategoryPicker } from "@/components/categories/CategoryPicker";
 
 const frequencies: Frequency[] = ["daily", "weekly", "biweekly", "monthly", "yearly"];
 
@@ -23,7 +24,7 @@ export function RecurringForm() {
   const [txType, setTxType] = useState<TxType>("expense");
   const [amount, setAmount] = useState("");
   const [accountId, setAccountId] = useState("");
-  const [categoryId, setCategoryId] = useState("");
+  const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [note, setNote] = useState("");
   const [frequency, setFrequency] = useState<Frequency>("monthly");
   const [startDate, setStartDate] = useState(todayIso());
@@ -35,7 +36,9 @@ export function RecurringForm() {
     ? accountId
     : accounts.find((a) => a.isPrimary)?.id ?? accounts[0]?.id ?? "";
 
-  const categoriesForType = useMemo(() => categories.filter((c) => c.type === txType), [categories, txType]);
+  function toggleCategory(id: string) {
+    setCategoryIds((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
+  }
 
   function submit() {
     const num = parseFloat(amount);
@@ -47,7 +50,7 @@ export function RecurringForm() {
       nextDueDate: startDate,
       amount: num,
       accountId: resolvedAccountId,
-      categoryId: categoryId || undefined,
+      categoryIds: categoryIds.length ? categoryIds : undefined,
       note,
       active: true,
       txType,
@@ -70,7 +73,7 @@ export function RecurringForm() {
           value={txType}
           onChange={(v) => {
             setTxType(v);
-            setCategoryId("");
+            setCategoryIds([]);
           }}
           options={[
             { value: "expense", label: "Expense" },
@@ -96,15 +99,8 @@ export function RecurringForm() {
       </div>
 
       <div className="mt-4">
-        <Label>Category</Label>
-        <SelectInput value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
-          <option value="">No category</option>
-          {categoriesForType.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.icon} {c.name}
-            </option>
-          ))}
-        </SelectInput>
+        <Label>Category (optional, pick as many as apply)</Label>
+        <CategoryPicker categories={categories} type={txType} selectedIds={categoryIds} onToggle={toggleCategory} />
       </div>
 
       <div className="mt-4">
@@ -129,7 +125,7 @@ export function RecurringForm() {
             type="date"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
-            className="w-full rounded-xl border border-line bg-card px-3.5 py-3 text-sm text-ink focus:border-accent focus:outline-none"
+            className="w-full rounded-xl border border-line bg-card px-3.5 py-3 text-base text-ink focus:border-accent focus:outline-none"
           />
         </div>
       </div>

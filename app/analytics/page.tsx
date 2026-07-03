@@ -66,9 +66,9 @@ export default function AnalyticsPage() {
       </div>
       {range === "custom" && (
         <div className="mt-2.5 flex items-center gap-2">
-          <input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} className="w-full rounded-lg border border-line bg-card px-2.5 py-2 text-xs" />
+          <input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} className="w-full rounded-lg border border-line bg-card px-2.5 py-2 text-base" />
           <span className="text-ink-faint">–</span>
-          <input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} className="w-full rounded-lg border border-line bg-card px-2.5 py-2 text-xs" />
+          <input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} className="w-full rounded-lg border border-line bg-card px-2.5 py-2 text-base" />
         </div>
       )}
 

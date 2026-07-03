@@ -74,7 +74,7 @@ export function DebtEntryForm({ debtId, kind }: { debtId: string; kind: DebtEntr
           type="date"
           value={date}
           onChange={(e) => setDate(e.target.value)}
-          className="w-full rounded-xl border border-line bg-card px-3.5 py-3 text-sm text-ink focus:border-accent focus:outline-none"
+          className="w-full rounded-xl border border-line bg-card px-3.5 py-3 text-base text-ink focus:border-accent focus:outline-none"
         />
       </div>
 

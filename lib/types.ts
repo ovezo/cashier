@@ -26,8 +26,9 @@ export interface Transaction {
   /** Amount leaving `accountId` (in its currency). For transfers, the "you send" side. */
   amount: number;
   accountId: string;
-  /** Absent for transactions generated from a debt-repayment recurring rule, and for transfers. */
-  categoryId?: string;
+  /** A transaction can carry more than one tag, e.g. "Groceries" + "Work". Absent for
+   * debt-repayment-generated transactions and transfers. */
+  categoryIds?: string[];
   note: string;
   date: string; // ISO date (yyyy-MM-dd)
   status: "confirmed" | "pending";
@@ -78,7 +79,7 @@ export interface RecurringRule {
   active: boolean;
   // kind === "transaction"
   txType?: TxType;
-  categoryId?: string;
+  categoryIds?: string[];
   // kind === "debt"
   linkedDebtId?: string;
 }

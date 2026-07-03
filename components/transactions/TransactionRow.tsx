@@ -8,8 +8,9 @@ import type { Transaction } from "@/lib/types";
 export function TransactionRow({ tx }: { tx: Transaction }) {
   const account = useCashierStore((s) => s.accounts.find((a) => a.id === tx.accountId));
   const toAccount = useCashierStore((s) => (tx.toAccountId ? s.accounts.find((a) => a.id === tx.toAccountId) : undefined));
-  const category = useCashierStore((s) => s.categories.find((c) => c.id === tx.categoryId));
+  const allCategories = useCashierStore((s) => s.categories);
   const debt = useCashierStore((s) => (tx.linkedDebtId ? s.debts.find((d) => d.id === tx.linkedDebtId) : undefined));
+  const txCategories = (tx.categoryIds ?? []).map((id) => allCategories.find((c) => c.id === id)).filter((c): c is NonNullable<typeof c> => Boolean(c));
 
   if (tx.type === "transfer") {
     return (
@@ -31,8 +32,8 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
     );
   }
 
-  const label = category?.name ?? (debt ? `Debt · ${debt.person}` : "Uncategorised");
-  const icon = category?.icon ?? "🤝";
+  const label = txCategories.length > 0 ? txCategories.map((c) => c.name).join(" · ") : debt ? `Debt · ${debt.person}` : "Uncategorised";
+  const icon = txCategories[0]?.icon ?? "🤝";
 
   return (
     <Link href={`/transactions/${tx.id}`} className="flex items-center gap-2.5 border-b border-line py-2.5 last:border-b-0">

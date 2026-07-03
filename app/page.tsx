@@ -17,7 +17,11 @@ export default function DashboardPage() {
   const { incomePrimary, expensePrimary } = periodTotals(transactions, accounts, start, end);
   const total = totalBalancePrimary(accounts, transactions);
   const pending = transactions.filter((t) => t.status === "pending");
-  const recent = [...transactions].filter((t) => t.status === "confirmed").sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 6);
+  const recent = [...transactions]
+    .filter((t) => t.status === "confirmed")
+    .reverse()
+    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+    .slice(0, 6);
 
   const monthLabel = new Date().toLocaleDateString(undefined, { month: "long", year: "numeric" });
 

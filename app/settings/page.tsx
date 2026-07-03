@@ -1,19 +1,13 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { Trash2 } from "lucide-react";
+import { useRef } from "react";
+import Link from "next/link";
+import { ChevronRight, Tag } from "lucide-react";
 import { useCashierStore } from "@/lib/store";
-import type { TxType } from "@/lib/types";
-import { Segmented } from "@/components/ui/Segmented";
 import { Button } from "@/components/ui/Button";
-import { TextInput } from "@/components/ui/Field";
-
-const CAT_TOKENS = ["cat-1", "cat-2", "cat-3", "cat-4", "cat-5", "cat-6"];
 
 export default function SettingsPage() {
   const categories = useCashierStore((s) => s.categories);
-  const addCategory = useCashierStore((s) => s.addCategory);
-  const deleteCategory = useCashierStore((s) => s.deleteCategory);
   const accounts = useCashierStore((s) => s.accounts);
   const transactions = useCashierStore((s) => s.transactions);
   const debts = useCashierStore((s) => s.debts);
@@ -21,17 +15,7 @@ export default function SettingsPage() {
   const importData = useCashierStore((s) => s.importData);
   const resetAllData = useCashierStore((s) => s.resetAllData);
 
-  const [type, setType] = useState<TxType>("expense");
-  const [name, setName] = useState("");
-  const [icon, setIcon] = useState("🏷️");
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  function addCat() {
-    if (!name.trim()) return;
-    addCategory({ name: name.trim(), type, icon, color: CAT_TOKENS[categories.length % CAT_TOKENS.length] });
-    setName("");
-    setIcon("🏷️");
-  }
 
   function exportData() {
     const payload = { accounts, categories, transactions, debts, recurringRules, exportedAt: new Date().toISOString() };
@@ -71,32 +55,16 @@ export default function SettingsPage() {
     <div className="px-4 pb-8 pt-5">
       <h1 className="font-serif text-xl font-semibold">Settings</h1>
 
-      <div className="mt-4 mb-1.5 text-[11px] font-bold uppercase tracking-wide text-ink-faint">Categories</div>
-      <div className="rounded-2xl border border-line bg-card">
-        {categories.map((c) => (
-          <div key={c.id} className="flex items-center gap-2.5 border-b border-line p-3 last:border-b-0">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-paper-deep text-[15px]">{c.icon}</span>
-            <span className="flex-1 text-[13px] font-semibold">{c.name}</span>
-            <span className="font-mono text-[10.5px] uppercase text-ink-faint">{c.type}</span>
-            <button aria-label={`Delete ${c.name}`} onClick={() => deleteCategory(c.id)} className="text-ink-faint">
-              <Trash2 size={15} />
-            </button>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-3 rounded-2xl border border-line bg-card p-3.5">
-        <Segmented value={type} onChange={setType} options={[{ value: "expense", label: "Expense" }, { value: "income", label: "Income" }]} />
-        <div className="mt-2.5 flex gap-2">
-          <TextInput value={icon} onChange={(e) => setIcon(e.target.value)} className="w-14 text-center" maxLength={2} />
-          <TextInput value={name} onChange={(e) => setName(e.target.value)} placeholder="New category name" />
+      <Link href="/settings/categories" className="mt-4 flex items-center gap-3 rounded-2xl border border-line bg-card p-3.5">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-paper-deep text-ink-soft">
+          <Tag size={18} />
         </div>
-        <div className="mt-2.5">
-          <Button variant="outline" onClick={addCat}>
-            Add category
-          </Button>
+        <div className="min-w-0 flex-1">
+          <div className="text-[13.5px] font-semibold">Categories</div>
+          <div className="truncate text-[11.5px] text-ink-faint">{categories.length} categories</div>
         </div>
-      </div>
+        <ChevronRight size={16} className="shrink-0 text-ink-faint" />
+      </Link>
 
       <div className="mt-5 mb-1.5 text-[11px] font-bold uppercase tracking-wide text-ink-faint">Backup & data</div>
       <p className="text-[12px] leading-relaxed text-ink-faint">
