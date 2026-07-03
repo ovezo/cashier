@@ -1,1 +1,1 @@
-export const COMMON_CURRENCIES = ["GBP", "USD", "EUR", "TRY", "TMT", "JPY", "AUD", "CAD", "CHF", "CNY", "INR", "AED"];
+export const COMMON_CURRENCIES = ["TMT", "GBP", "USD", "EUR", "TRY", "JPY", "AUD", "CAD", "CHF", "CNY", "INR", "AED"];

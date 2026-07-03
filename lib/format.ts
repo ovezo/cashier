@@ -7,6 +7,9 @@ const symbolByCurrency: Record<string, string> = {
   AED: "د.إ",
   CNY: "¥",
   INR: "₹",
+  // No official symbol — reuse the Tögrög sign (a capital T with a horizontal
+  // double-stroke), the closest existing "T + line through it" glyph.
+  TMT: "₮",
 };
 
 export function currencySymbol(currency: string): string {
