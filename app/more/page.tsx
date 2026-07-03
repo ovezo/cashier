@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, Landmark, Repeat, Wallet, Settings as SettingsIcon } from "lucide-react";
+import { ChevronRight, Landmark, Repeat, Wallet, Tag, DatabaseBackup } from "lucide-react";
 import { useCashierStore } from "@/lib/store";
 
 export default function MorePage() {
   const debts = useCashierStore((s) => s.debts);
+  const categories = useCashierStore((s) => s.categories);
   const pendingCount = useCashierStore((s) => s.transactions.filter((t) => t.status === "pending").length);
 
   const openDebts = debts.filter((d) => d.status !== "paid").length;
@@ -14,7 +15,8 @@ export default function MorePage() {
     { href: "/debts", label: "Debts", desc: "Money owed to you and by you", icon: Landmark, badge: openDebts > 0 ? String(openDebts) : undefined },
     { href: "/recurring", label: "Recurring", desc: "Scheduled income, bills & instalments", icon: Repeat, badge: pendingCount > 0 ? String(pendingCount) : undefined },
     { href: "/accounts", label: "Accounts", desc: "Currencies, exchange rates, primary account", icon: Wallet },
-    { href: "/settings", label: "Settings", desc: "Categories, backup & data", icon: SettingsIcon },
+    { href: "/categories", label: "Categories", desc: `${categories.length} categories`, icon: Tag },
+    { href: "/settings", label: "Data & Backups", desc: "Export, import & clear your data", icon: DatabaseBackup },
   ];
 
   return (
