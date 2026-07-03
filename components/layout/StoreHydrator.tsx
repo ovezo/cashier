@@ -8,6 +8,7 @@ export function StoreHydrator() {
 
   useEffect(() => {
     if (hasHydrated) {
+      useCashierStore.getState().seedIfEmpty();
       useCashierStore.getState().generatePending();
     }
   }, [hasHydrated]);

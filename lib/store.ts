@@ -21,6 +21,7 @@ interface CashierState {
   recurringRules: RecurringRule[];
   hasHydrated: boolean;
   setHasHydrated: (v: boolean) => void;
+  seedIfEmpty: () => void;
 
   // accounts
   addAccount: (input: Omit<Account, "id" | "isPrimary">) => void;
@@ -60,13 +61,19 @@ interface CashierState {
 export const useCashierStore = create<CashierState>()(
   persist(
     (set, get) => ({
-      accounts: seedAccounts(),
-      categories: seedCategories(),
+      // Deterministic (empty) on both server and pre-hydration client render, so SSR output
+      // always matches the first client paint. `seedIfEmpty` populates real defaults — with
+      // a random account id — only once hydration has confirmed there's no persisted data.
+      accounts: [],
+      categories: [],
       transactions: [],
       debts: [],
       recurringRules: [],
       hasHydrated: false,
       setHasHydrated: (v) => set({ hasHydrated: v }),
+
+      seedIfEmpty: () =>
+        set((s) => (s.accounts.length === 0 && s.categories.length === 0 ? { accounts: seedAccounts(), categories: seedCategories() } : s)),
 
       addAccount: (input) =>
         set((s) => ({ accounts: [...s.accounts, { ...input, id: createId(), isPrimary: s.accounts.length === 0 }] })),

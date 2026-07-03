@@ -24,17 +24,24 @@ export function DebtForm() {
   const [direction, setDirection] = useState<DebtDirection>("owed_to_me");
   const [person, setPerson] = useState("");
   const [principal, setPrincipal] = useState("");
-  const [accountId, setAccountId] = useState(accounts.find((a) => a.isPrimary)?.id ?? accounts[0]?.id ?? "");
+  const [accountId, setAccountId] = useState("");
   const [note, setNote] = useState("");
   const [recurring, setRecurring] = useState(false);
   const [frequency, setFrequency] = useState<Frequency>("monthly");
   const [instalment, setInstalment] = useState("");
 
+  // `accounts` is empty until hydration + seeding finish (both async). Resolve the default at
+  // render time so it self-heals the moment real data arrives, rather than capturing whatever
+  // was in the store at mount time.
+  const resolvedAccountId = accounts.some((a) => a.id === accountId)
+    ? accountId
+    : accounts.find((a) => a.isPrimary)?.id ?? accounts[0]?.id ?? "";
+
   function submit() {
     const principalNum = parseFloat(principal);
-    if (!person.trim() || !principalNum || principalNum <= 0 || !accountId) return;
+    if (!person.trim() || !principalNum || principalNum <= 0 || !resolvedAccountId) return;
 
-    const debtId = addDebt({ direction, person: person.trim(), principal: principalNum, accountId, note });
+    const debtId = addDebt({ direction, person: person.trim(), principal: principalNum, accountId: resolvedAccountId, note });
 
     if (recurring) {
       const instalmentNum = parseFloat(instalment) || principalNum;
@@ -44,7 +51,7 @@ export function DebtForm() {
         startDate: todayIso(),
         nextDueDate: todayIso(),
         amount: instalmentNum,
-        accountId,
+        accountId: resolvedAccountId,
         note: `Instalment · ${person.trim()}`,
         active: true,
         linkedDebtId: debtId,
@@ -87,7 +94,7 @@ export function DebtForm() {
 
       <div className="mt-4">
         <Label>Currency / account</Label>
-        <SelectInput value={accountId} onChange={(e) => setAccountId(e.target.value)}>
+        <SelectInput value={resolvedAccountId} onChange={(e) => setAccountId(e.target.value)}>
           {accounts.map((a) => (
             <option key={a.id} value={a.id}>
               {a.name} ({a.currency})

@@ -9,3 +9,9 @@ export function toPrimary(amount: number, account: Account | undefined): number 
 export function getPrimaryAccount(accounts: Account[]): Account | undefined {
   return accounts.find((a) => a.isPrimary) ?? accounts[0];
 }
+
+/** Default rate FROM `from`'s currency TO `to`'s currency, derived from each account's rate-to-primary. */
+export function crossRate(from: Account | undefined, to: Account | undefined): number {
+  if (!from || !to || !to.exchangeRateToPrimary) return 1;
+  return from.exchangeRateToPrimary / to.exchangeRateToPrimary;
+}

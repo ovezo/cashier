@@ -22,24 +22,31 @@ export function RecurringForm() {
 
   const [txType, setTxType] = useState<TxType>("expense");
   const [amount, setAmount] = useState("");
-  const [accountId, setAccountId] = useState(accounts.find((a) => a.isPrimary)?.id ?? accounts[0]?.id ?? "");
+  const [accountId, setAccountId] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [note, setNote] = useState("");
   const [frequency, setFrequency] = useState<Frequency>("monthly");
   const [startDate, setStartDate] = useState(todayIso());
 
+  // `accounts` is empty until hydration + seeding finish (both async). Resolve the default at
+  // render time so it self-heals the moment real data arrives, rather than capturing whatever
+  // was in the store at mount time.
+  const resolvedAccountId = accounts.some((a) => a.id === accountId)
+    ? accountId
+    : accounts.find((a) => a.isPrimary)?.id ?? accounts[0]?.id ?? "";
+
   const categoriesForType = useMemo(() => categories.filter((c) => c.type === txType), [categories, txType]);
 
   function submit() {
     const num = parseFloat(amount);
-    if (!num || num <= 0 || !accountId) return;
+    if (!num || num <= 0 || !resolvedAccountId) return;
     addRecurringRule({
       kind: "transaction",
       frequency,
       startDate,
       nextDueDate: startDate,
       amount: num,
-      accountId,
+      accountId: resolvedAccountId,
       categoryId: categoryId || undefined,
       note,
       active: true,
@@ -79,7 +86,7 @@ export function RecurringForm() {
 
       <div className="mt-4">
         <Label>Account</Label>
-        <SelectInput value={accountId} onChange={(e) => setAccountId(e.target.value)}>
+        <SelectInput value={resolvedAccountId} onChange={(e) => setAccountId(e.target.value)}>
           {accounts.map((a) => (
             <option key={a.id} value={a.id}>
               {a.name} ({a.currency})

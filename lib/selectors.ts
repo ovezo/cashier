@@ -2,9 +2,18 @@ import type { Account, Transaction } from "./types";
 import { toPrimary } from "./currency";
 
 export function accountBalance(accountId: string, transactions: Transaction[]): number {
-  return transactions
-    .filter((t) => t.accountId === accountId && t.status === "confirmed")
-    .reduce((sum, t) => sum + (t.type === "income" ? t.amount : -t.amount), 0);
+  let balance = 0;
+  for (const t of transactions) {
+    if (t.status !== "confirmed") continue;
+    if (t.type === "transfer") {
+      if (t.accountId === accountId) balance -= t.amount;
+      if (t.toAccountId === accountId) balance += t.toAmount ?? t.amount;
+      continue;
+    }
+    if (t.accountId !== accountId) continue;
+    balance += t.type === "income" ? t.amount : -t.amount;
+  }
+  return balance;
 }
 
 export function totalBalancePrimary(accounts: Account[], transactions: Transaction[]): number {
@@ -21,7 +30,7 @@ export function periodTotals(
   let incomePrimary = 0;
   let expensePrimary = 0;
   for (const t of transactions) {
-    if (t.status !== "confirmed" || t.date < from || t.date > to) continue;
+    if (t.status !== "confirmed" || t.date < from || t.date > to || t.type === "transfer") continue;
     const converted = toPrimary(t.amount, accountById.get(t.accountId));
     if (t.type === "income") incomePrimary += converted;
     else expensePrimary += converted;

@@ -1,6 +1,7 @@
 export type Frequency = "daily" | "weekly" | "biweekly" | "monthly" | "yearly";
 
 export type TxType = "income" | "expense";
+export type TransactionType = TxType | "transfer";
 
 export interface Account {
   id: string;
@@ -21,16 +22,20 @@ export interface Category {
 
 export interface Transaction {
   id: string;
-  type: TxType;
+  type: TransactionType;
+  /** Amount leaving `accountId` (in its currency). For transfers, the "you send" side. */
   amount: number;
   accountId: string;
-  /** Absent for transactions generated from a debt-repayment recurring rule. */
+  /** Absent for transactions generated from a debt-repayment recurring rule, and for transfers. */
   categoryId?: string;
   note: string;
   date: string; // ISO date (yyyy-MM-dd)
   status: "confirmed" | "pending";
   recurringId?: string;
   linkedDebtId?: string;
+  /** type === "transfer" only: destination account and the amount it receives (in its own currency). */
+  toAccountId?: string;
+  toAmount?: number;
 }
 
 export interface Repayment {

@@ -40,7 +40,7 @@ export default function TransactionsPage() {
       if (t.status !== "confirmed") return false;
       if (t.date < from || t.date > to) return false;
       if (categoryId !== "all" && t.categoryId !== categoryId) return false;
-      if (accountId !== "all" && t.accountId !== accountId) return false;
+      if (accountId !== "all" && t.accountId !== accountId && t.toAccountId !== accountId) return false;
       return true;
     });
   }, [transactions, range, customFrom, customTo, categoryId, accountId]);
