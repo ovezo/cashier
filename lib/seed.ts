@@ -3,7 +3,7 @@ import { createId } from "./id";
 
 export function seedAccounts(): Account[] {
   return [
-    { id: createId(), name: "GBP Wallet", currency: "GBP", isPrimary: true, exchangeRateToPrimary: 1 },
+    { id: createId(), name: "GBP Wallet", currency: "GBP", isPrimary: true, exchangeRateToPrimary: 1, openingBalance: 0 },
   ];
 }
 

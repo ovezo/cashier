@@ -21,6 +21,7 @@ export function AccountForm({ existing }: { existing?: Account }) {
   const [name, setName] = useState(existing?.name ?? "");
   const [currency, setCurrency] = useState(existing?.currency ?? "USD");
   const [rate, setRate] = useState(existing ? String(existing.exchangeRateToPrimary) : "1");
+  const [openingBalance, setOpeningBalance] = useState(existing ? String(existing.openingBalance) : "");
 
   const primary = accounts.find((a) => a.isPrimary);
   const isPrimary = existing?.isPrimary ?? false;
@@ -28,10 +29,11 @@ export function AccountForm({ existing }: { existing?: Account }) {
   function submit() {
     if (!name.trim()) return;
     const rateNum = parseFloat(rate) || 1;
+    const openingBalanceNum = parseFloat(openingBalance) || 0;
     if (existing) {
-      updateAccount(existing.id, { name: name.trim(), currency, exchangeRateToPrimary: isPrimary ? 1 : rateNum });
+      updateAccount(existing.id, { name: name.trim(), currency, exchangeRateToPrimary: isPrimary ? 1 : rateNum, openingBalance: openingBalanceNum });
     } else {
-      addAccount({ name: name.trim(), currency, exchangeRateToPrimary: rateNum });
+      addAccount({ name: name.trim(), currency, exchangeRateToPrimary: rateNum, openingBalance: openingBalanceNum });
     }
     router.push("/accounts");
   }
@@ -59,6 +61,14 @@ export function AccountForm({ existing }: { existing?: Account }) {
             </option>
           ))}
         </SelectInput>
+      </div>
+
+      <div className="mt-4">
+        <Label>Starting balance</Label>
+        <TextInput inputMode="decimal" value={openingBalance} onChange={(e) => setOpeningBalance(sanitizeDecimalInput(e.target.value))} placeholder="0.00" />
+        <p className="mt-2 text-[11.5px] leading-relaxed text-ink-faint">
+          What this wallet already held before you started tracking it here. Totals add this on top of your logged transactions.
+        </p>
       </div>
 
       {!isPrimary && (

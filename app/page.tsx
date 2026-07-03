@@ -86,7 +86,7 @@ export default function DashboardPage() {
               {a.isPrimary && <span className="h-1.5 w-1.5 rounded-full bg-accent" />}
               {a.name}
             </div>
-            <div className="tabular mt-1 text-[15px] font-semibold">{formatAmount(accountBalance(a.id, transactions), a.currency)}</div>
+            <div className="tabular mt-1 text-[15px] font-semibold">{formatAmount(accountBalance(a, transactions), a.currency)}</div>
           </div>
         ))}
       </div>

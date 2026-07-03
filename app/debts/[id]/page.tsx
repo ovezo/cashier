@@ -6,10 +6,11 @@ import { X } from "lucide-react";
 import { useCashierStore } from "@/lib/store";
 import { debtTotals } from "@/lib/selectors";
 import { getPrimaryAccount } from "@/lib/currency";
-import { formatAmount, formatDate } from "@/lib/format";
+import { formatAmount } from "@/lib/format";
 import { frequencyLabel } from "@/lib/recurring";
 import { Chip } from "@/components/ui/Chip";
 import { LinkButton } from "@/components/ui/LinkButton";
+import { DebtHistoryRow } from "@/components/debts/DebtHistoryRow";
 
 const statusLabel = { outstanding: "Outstanding", partially_paid: "Partially paid", paid: "Paid" } as const;
 const statusTone = { outstanding: "expense", partially_paid: "pending", paid: "income" } as const;
@@ -87,22 +88,9 @@ export default function DebtDetailPage({ params }: { params: Promise<{ id: strin
       )}
 
       <div className="mt-5 mb-2 text-[11px] font-bold uppercase tracking-wide text-ink-faint">History</div>
-      {history.map((e) => {
-        const entryAccount = accounts.find((a) => a.id === e.accountId);
-        const isLend = e.kind === "lend";
-        return (
-          <div key={e.id} className="border-b border-line py-2.5 last:border-b-0">
-            <div className="flex items-center justify-between text-[13px]">
-              <span className="text-ink-faint">{formatDate(e.date)}</span>
-              <span className={`tabular font-semibold ${isLend ? "text-ink" : "text-income"}`}>
-                {isLend ? "+" : "−"}
-                {formatAmount(e.amount, entryAccount?.currency ?? "")}
-              </span>
-            </div>
-            {e.note && <div className="mt-0.5 text-[11.5px] text-ink-faint">{e.note}</div>}
-          </div>
-        );
-      })}
+      {history.map((e) => (
+        <DebtHistoryRow key={e.id} debtId={debt.id} entry={e} account={accounts.find((a) => a.id === e.accountId)} />
+      ))}
 
       <button
         onClick={() => {

@@ -32,7 +32,15 @@ export function TransactionRow({ tx }: { tx: Transaction }) {
     );
   }
 
-  const label = txCategories.length > 0 ? txCategories.map((c) => c.name).join(" · ") : debt ? `Debt · ${debt.person}` : "Uncategorised";
+  let debtContext: string | undefined;
+  if (debt) {
+    const direction = debt.direction === "owed_to_me" ? "Owed to me" : "I owe";
+    const isRepayment = debt.direction === "owed_to_me" ? tx.type === "income" : tx.type === "expense";
+    const qualifier = isRepayment ? (debt.direction === "owed_to_me" ? " · Received" : " · Paid") : "";
+    debtContext = `${direction}${qualifier} · ${debt.person}`;
+  }
+
+  const label = txCategories.length > 0 ? txCategories.map((c) => c.name).join(" · ") : debtContext ?? "Uncategorised";
   const icon = txCategories[0]?.icon ?? "🤝";
 
   return (

@@ -6,39 +6,47 @@ import { X } from "lucide-react";
 import { useCashierStore } from "@/lib/store";
 import { getPrimaryAccount } from "@/lib/currency";
 import { sanitizeDecimalInput, todayIso } from "@/lib/format";
-import type { DebtEntryKind } from "@/lib/types";
+import type { DebtEntry, DebtEntryKind } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 import { Label, SelectInput, TextInput } from "@/components/ui/Field";
 
-export function DebtEntryForm({ debtId, kind }: { debtId: string; kind: DebtEntryKind }) {
+export function DebtEntryForm({ debtId, kind, existing }: { debtId: string; kind?: DebtEntryKind; existing?: DebtEntry }) {
   const router = useRouter();
   const debt = useCashierStore((s) => s.debts.find((d) => d.id === debtId));
   const accounts = useCashierStore((s) => s.accounts);
   const addDebtEntry = useCashierStore((s) => s.addDebtEntry);
+  const updateDebtEntry = useCashierStore((s) => s.updateDebtEntry);
 
-  const [amount, setAmount] = useState("");
-  const [accountId, setAccountId] = useState("");
-  const [date, setDate] = useState(todayIso());
-  const [note, setNote] = useState("");
+  const entryKind = existing?.kind ?? kind ?? "repayment";
+  const [amount, setAmount] = useState(existing ? String(existing.amount) : "");
+  const [accountId, setAccountId] = useState(existing?.accountId ?? "");
+  const [date, setDate] = useState(existing?.date ?? todayIso());
+  const [note, setNote] = useState(existing?.note ?? "");
 
   const primary = getPrimaryAccount(accounts);
   const resolvedAccountId = accounts.some((a) => a.id === accountId) ? accountId : primary?.id ?? "";
 
   if (!debt) return <p className="px-4 py-8 text-sm text-ink-faint">Debt not found.</p>;
 
-  const isLend = kind === "lend";
-  const title = isLend
-    ? debt.direction === "owed_to_me"
-      ? "Lend more"
-      : "Borrow more"
-    : debt.direction === "owed_to_me"
-      ? "Record received"
-      : "Record repayment";
+  const isLend = entryKind === "lend";
+  const title = existing
+    ? "Edit entry"
+    : isLend
+      ? debt.direction === "owed_to_me"
+        ? "Lend more"
+        : "Borrow more"
+      : debt.direction === "owed_to_me"
+        ? "Record received"
+        : "Record repayment";
 
   function submit() {
     const num = parseFloat(amount);
     if (!num || num <= 0 || !resolvedAccountId) return;
-    addDebtEntry(debtId, { kind, amount: num, accountId: resolvedAccountId, date, note: note.trim() });
+    if (existing) {
+      updateDebtEntry(debtId, existing.id, { amount: num, accountId: resolvedAccountId, date, note: note.trim() });
+    } else {
+      addDebtEntry(debtId, { kind: entryKind, amount: num, accountId: resolvedAccountId, date, note: note.trim() });
+    }
     router.back();
   }
 
@@ -84,7 +92,7 @@ export function DebtEntryForm({ debtId, kind }: { debtId: string; kind: DebtEntr
       </div>
 
       <div className="mt-6">
-        <Button onClick={submit}>{title}</Button>
+        <Button onClick={submit}>{existing ? "Save changes" : title}</Button>
       </div>
     </div>
   );

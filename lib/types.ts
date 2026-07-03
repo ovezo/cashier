@@ -10,6 +10,8 @@ export interface Account {
   isPrimary: boolean;
   /** Rate FROM this currency TO the primary currency. Primary account is always 1. */
   exchangeRateToPrimary: number;
+  /** Balance the wallet started with before any logged transactions, in its own currency. */
+  openingBalance: number;
 }
 
 export interface Category {
@@ -34,6 +36,8 @@ export interface Transaction {
   status: "confirmed" | "pending";
   recurringId?: string;
   linkedDebtId?: string;
+  /** The specific debt entry (lend/repayment) this transaction was posted for. */
+  entryId?: string;
   /** type === "transfer" only: destination account and the amount it receives (in its own currency). */
   toAccountId?: string;
   toAmount?: number;
@@ -54,6 +58,8 @@ export interface DebtEntry {
   accountId: string;
   date: string;
   note: string;
+  /** kind === "lend" only: fully offset by a "Mark as paid" repayment. */
+  paid?: boolean;
 }
 
 export interface Debt {

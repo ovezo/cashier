@@ -55,6 +55,12 @@ interface CashierState {
   updateDebt: (id: string, patch: Partial<Omit<Debt, "id" | "entries">>) => void;
   /** Manual repayment or "borrowed/lent more" entry from the debt detail screen — also posts a linked wallet transaction. */
   addDebtEntry: (debtId: string, input: { kind: DebtEntry["kind"]; amount: number; accountId: string; date: string; note: string }) => void;
+  /** Edits a single history entry and keeps its linked wallet transaction in sync. */
+  updateDebtEntry: (debtId: string, entryId: string, patch: { amount: number; accountId: string; date: string; note: string }) => void;
+  /** Removes a single history entry and its linked wallet transaction. */
+  deleteDebtEntry: (debtId: string, entryId: string) => void;
+  /** Quick "fully paid" shortcut for a "lend" entry: marks it paid and posts a matching repayment dated today. */
+  markDebtEntryPaid: (debtId: string, entryId: string) => void;
   deleteDebt: (id: string) => void;
 
   // recurring
@@ -138,14 +144,18 @@ export const useCashierStore = create<CashierState>()(
       confirmTransaction: (id) => {
         const tx = get().transactions.find((t) => t.id === id);
         if (!tx) return;
+        if (!tx.linkedDebtId) {
+          set((s) => ({ transactions: s.transactions.map((t) => (t.id === id ? { ...t, status: "confirmed" as const } : t)) }));
+          return;
+        }
+        // The transaction already exists (it's `tx` itself) — just record the debt bookkeeping
+        // and link back to it, don't post another transaction.
+        const entryId = createId();
         set((s) => {
-          const transactions = s.transactions.map((t) => (t.id === id ? { ...t, status: "confirmed" as const } : t));
-          if (!tx.linkedDebtId) return { transactions };
-          // The transaction already exists (it's `tx` itself) — just record the debt bookkeeping,
-          // don't post another linked transaction.
+          const transactions = s.transactions.map((t) => (t.id === id ? { ...t, status: "confirmed" as const, entryId } : t));
           const debts = s.debts.map((d) => {
             if (d.id !== tx.linkedDebtId) return d;
-            const entry: DebtEntry = { id: createId(), kind: "repayment", amount: tx.amount, accountId: tx.accountId, date: tx.date, note: tx.note };
+            const entry: DebtEntry = { id: entryId, kind: "repayment", amount: tx.amount, accountId: tx.accountId, date: tx.date, note: tx.note };
             const updated = { ...d, entries: [...d.entries, entry] };
             return { ...updated, status: recomputeDebtStatus(updated, s.accounts) };
           });
@@ -157,7 +167,8 @@ export const useCashierStore = create<CashierState>()(
 
       addDebt: (input) => {
         const id = createId();
-        const entry: DebtEntry = { id: createId(), kind: "lend", amount: input.amount, accountId: input.accountId, date: input.date, note: input.note };
+        const entryId = createId();
+        const entry: DebtEntry = { id: entryId, kind: "lend", amount: input.amount, accountId: input.accountId, date: input.date, note: input.note };
         const debt: Debt = { id, direction: input.direction, person: input.person, status: "outstanding", entries: [entry], createdAt: input.date };
         const tx: Transaction = {
           id: createId(),
@@ -168,6 +179,7 @@ export const useCashierStore = create<CashierState>()(
           date: input.date,
           status: "confirmed",
           linkedDebtId: id,
+          entryId,
         };
         set((s) => ({ debts: [...s.debts, debt], transactions: [...s.transactions, tx] }));
         return id;
@@ -179,7 +191,8 @@ export const useCashierStore = create<CashierState>()(
       addDebtEntry: (debtId, input) => {
         const debt = get().debts.find((d) => d.id === debtId);
         if (!debt) return;
-        const entry: DebtEntry = { id: createId(), kind: input.kind, amount: input.amount, accountId: input.accountId, date: input.date, note: input.note };
+        const entryId = createId();
+        const entry: DebtEntry = { id: entryId, kind: input.kind, amount: input.amount, accountId: input.accountId, date: input.date, note: input.note };
         const isLend = input.kind === "lend";
         const txType = isLend
           ? debt.direction === "owed_to_me"
@@ -204,11 +217,66 @@ export const useCashierStore = create<CashierState>()(
           date: input.date,
           status: "confirmed",
           linkedDebtId: debtId,
+          entryId,
         };
         set((s) => ({
           debts: s.debts.map((d) => {
             if (d.id !== debtId) return d;
             const updated = { ...d, entries: [...d.entries, entry] };
+            return { ...updated, status: recomputeDebtStatus(updated, s.accounts) };
+          }),
+          transactions: [...s.transactions, tx],
+        }));
+      },
+
+      updateDebtEntry: (debtId, entryId, patch) =>
+        set((s) => ({
+          debts: s.debts.map((d) => {
+            if (d.id !== debtId) return d;
+            const updated = { ...d, entries: d.entries.map((e) => (e.id === entryId ? { ...e, ...patch } : e)) };
+            return { ...updated, status: recomputeDebtStatus(updated, s.accounts) };
+          }),
+          transactions: s.transactions.map((t) =>
+            t.linkedDebtId === debtId && t.entryId === entryId
+              ? { ...t, amount: patch.amount, accountId: patch.accountId, date: patch.date, note: patch.note }
+              : t
+          ),
+        })),
+
+      deleteDebtEntry: (debtId, entryId) =>
+        set((s) => ({
+          debts: s.debts.map((d) => {
+            if (d.id !== debtId) return d;
+            const updated = { ...d, entries: d.entries.filter((e) => e.id !== entryId) };
+            return { ...updated, status: recomputeDebtStatus(updated, s.accounts) };
+          }),
+          transactions: s.transactions.filter((t) => !(t.linkedDebtId === debtId && t.entryId === entryId)),
+        })),
+
+      markDebtEntryPaid: (debtId, entryId) => {
+        const debt = get().debts.find((d) => d.id === debtId);
+        const entry = debt?.entries.find((e) => e.id === entryId);
+        if (!debt || !entry || entry.kind !== "lend" || entry.paid) return;
+        const newEntryId = createId();
+        const repayment: DebtEntry = { id: newEntryId, kind: "repayment", amount: entry.amount, accountId: entry.accountId, date: todayIso(), note: "Paid" };
+        const tx: Transaction = {
+          id: createId(),
+          type: debt.direction === "owed_to_me" ? "income" : "expense",
+          amount: entry.amount,
+          accountId: entry.accountId,
+          note: "Paid",
+          date: todayIso(),
+          status: "confirmed",
+          linkedDebtId: debtId,
+          entryId: newEntryId,
+        };
+        set((s) => ({
+          debts: s.debts.map((d) => {
+            if (d.id !== debtId) return d;
+            const updated = {
+              ...d,
+              entries: [...d.entries.map((e) => (e.id === entryId ? { ...e, paid: true } : e)), repayment],
+            };
             return { ...updated, status: recomputeDebtStatus(updated, s.accounts) };
           }),
           transactions: [...s.transactions, tx],

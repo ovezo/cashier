@@ -15,23 +15,23 @@ export function debtTotals(debt: Debt, accounts: Account[]): { principal: number
   return { principal, repaid, outstanding: Math.max(principal - repaid, 0) };
 }
 
-export function accountBalance(accountId: string, transactions: Transaction[]): number {
-  let balance = 0;
+export function accountBalance(account: Account, transactions: Transaction[]): number {
+  let balance = account.openingBalance ?? 0;
   for (const t of transactions) {
     if (t.status !== "confirmed") continue;
     if (t.type === "transfer") {
-      if (t.accountId === accountId) balance -= t.amount;
-      if (t.toAccountId === accountId) balance += t.toAmount ?? t.amount;
+      if (t.accountId === account.id) balance -= t.amount;
+      if (t.toAccountId === account.id) balance += t.toAmount ?? t.amount;
       continue;
     }
-    if (t.accountId !== accountId) continue;
+    if (t.accountId !== account.id) continue;
     balance += t.type === "income" ? t.amount : -t.amount;
   }
   return balance;
 }
 
 export function totalBalancePrimary(accounts: Account[], transactions: Transaction[]): number {
-  return accounts.reduce((sum, a) => sum + toPrimary(accountBalance(a.id, transactions), a), 0);
+  return accounts.reduce((sum, a) => sum + toPrimary(accountBalance(a, transactions), a), 0);
 }
 
 export function periodTotals(

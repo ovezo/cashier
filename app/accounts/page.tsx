@@ -32,7 +32,7 @@ export default function AccountsPage() {
                 {a.currency} {!a.isPrimary && `· 1 ${a.currency} = ${a.exchangeRateToPrimary} ${primary?.currency}`}
               </div>
             </div>
-            <div className="tabular text-[14px] font-semibold">{formatAmount(accountBalance(a.id, transactions), a.currency)}</div>
+            <div className="tabular text-[14px] font-semibold">{formatAmount(accountBalance(a, transactions), a.currency)}</div>
           </Link>
         ))}
       </div>
