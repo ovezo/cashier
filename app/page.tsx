@@ -17,11 +17,9 @@ export default function DashboardPage() {
   const { incomePrimary, expensePrimary } = periodTotals(transactions, accounts, start, end);
   const total = totalBalancePrimary(accounts, transactions);
   const pending = transactions.filter((t) => t.status === "pending");
-  const recent = [...transactions]
-    .filter((t) => t.status === "confirmed")
-    .reverse()
-    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
-    .slice(0, 6);
+  // Take the last 6 *added* (not yet display-sorted) — TransactionList does the newest-first
+  // sort itself, so pre-sorting here would double-sort and scramble same-day ordering.
+  const recent = transactions.filter((t) => t.status === "confirmed").slice(-6);
 
   const monthLabel = new Date().toLocaleDateString(undefined, { month: "long", year: "numeric" });
 
