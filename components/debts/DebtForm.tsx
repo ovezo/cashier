@@ -25,6 +25,7 @@ export function DebtForm() {
   const [person, setPerson] = useState("");
   const [principal, setPrincipal] = useState("");
   const [accountId, setAccountId] = useState("");
+  const [date, setDate] = useState(todayIso());
   const [note, setNote] = useState("");
   const [recurring, setRecurring] = useState(false);
   const [frequency, setFrequency] = useState<Frequency>("monthly");
@@ -37,11 +38,13 @@ export function DebtForm() {
     ? accountId
     : accounts.find((a) => a.isPrimary)?.id ?? accounts[0]?.id ?? "";
 
+  const verb = direction === "owed_to_me" ? "Lending" : "Borrowing";
+
   function submit() {
     const principalNum = parseFloat(principal);
     if (!person.trim() || !principalNum || principalNum <= 0 || !resolvedAccountId) return;
 
-    const debtId = addDebt({ direction, person: person.trim(), principal: principalNum, accountId: resolvedAccountId, note });
+    const debtId = addDebt({ direction, person: person.trim(), amount: principalNum, accountId: resolvedAccountId, date, note: note.trim() });
 
     if (recurring) {
       const instalmentNum = parseFloat(instalment) || principalNum;
@@ -88,12 +91,12 @@ export function DebtForm() {
       </div>
 
       <div className="mt-4">
-        <Label>Principal amount</Label>
+        <Label>Amount</Label>
         <TextInput inputMode="decimal" value={principal} onChange={(e) => setPrincipal(sanitizeDecimalInput(e.target.value))} placeholder="0.00" />
       </div>
 
       <div className="mt-4">
-        <Label>Currency / account</Label>
+        <Label>Wallet</Label>
         <SelectInput value={resolvedAccountId} onChange={(e) => setAccountId(e.target.value)}>
           {accounts.map((a) => (
             <option key={a.id} value={a.id}>
@@ -101,6 +104,19 @@ export function DebtForm() {
             </option>
           ))}
         </SelectInput>
+        <p className="mt-2 text-[11.5px] leading-relaxed text-ink-faint">
+          {verb} {principal || "0.00"} {accounts.find((a) => a.id === resolvedAccountId)?.currency} moves through this wallet as a transaction today.
+        </p>
+      </div>
+
+      <div className="mt-4">
+        <Label>Date</Label>
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          className="w-full rounded-xl border border-line bg-card px-3.5 py-3 text-sm text-ink focus:border-accent focus:outline-none"
+        />
       </div>
 
       <div className="mt-4">
@@ -130,7 +146,7 @@ export function DebtForm() {
             </SelectInput>
           </div>
           <p className="text-[11.5px] leading-relaxed text-ink-faint">
-            Each cycle creates a pending entry you&apos;ll confirm manually as paid or received.
+            Each cycle creates a pending entry you&apos;ll confirm manually as paid or received, using this same wallet.
           </p>
         </div>
       )}

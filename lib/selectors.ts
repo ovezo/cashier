@@ -1,5 +1,19 @@
-import type { Account, Transaction } from "./types";
+import type { Account, Debt, Transaction } from "./types";
 import { toPrimary } from "./currency";
+
+/** A debt's entries can each be in a different currency (different wallet chosen each time),
+ * so principal/repaid/outstanding are always expressed in the primary currency. */
+export function debtTotals(debt: Debt, accounts: Account[]): { principal: number; repaid: number; outstanding: number } {
+  const accountById = new Map(accounts.map((a) => [a.id, a]));
+  let principal = 0;
+  let repaid = 0;
+  for (const e of debt.entries) {
+    const converted = toPrimary(e.amount, accountById.get(e.accountId));
+    if (e.kind === "lend") principal += converted;
+    else repaid += converted;
+  }
+  return { principal, repaid, outstanding: Math.max(principal - repaid, 0) };
+}
 
 export function accountBalance(accountId: string, transactions: Transaction[]): number {
   let balance = 0;

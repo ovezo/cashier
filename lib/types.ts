@@ -38,24 +38,30 @@ export interface Transaction {
   toAmount?: number;
 }
 
-export interface Repayment {
-  id: string;
-  amount: number;
-  date: string;
-}
-
 export type DebtDirection = "owed_to_me" | "i_owe";
 export type DebtStatus = "outstanding" | "partially_paid" | "paid";
+
+/** "lend" grows the outstanding balance (the original loan, or borrowing/lending more later).
+ *  "repayment" shrinks it. Each entry carries its own wallet, since a repayment can happen
+ *  in a different currency than the original loan. */
+export type DebtEntryKind = "lend" | "repayment";
+
+export interface DebtEntry {
+  id: string;
+  kind: DebtEntryKind;
+  amount: number; // in accountId's currency
+  accountId: string;
+  date: string;
+  note: string;
+}
 
 export interface Debt {
   id: string;
   direction: DebtDirection;
   person: string;
-  principal: number;
-  accountId: string;
-  note: string;
   status: DebtStatus;
-  repayments: Repayment[];
+  /** entries[0] is always the original loan (kind "lend") — the debt's history/timeline. */
+  entries: DebtEntry[];
   recurringId?: string;
   createdAt: string;
 }
