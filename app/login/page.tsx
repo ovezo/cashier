@@ -80,7 +80,7 @@ export default function LoginPage() {
         {mode === "signin" ? "Sign in to sync" : "Create an account"}
       </h1>
       <p className="mt-1.5 text-center text-[12.5px] text-ink-faint">
-        Optional — Cashier works fully offline without an account.
+        Your data is saved to your account and synced across your devices.
       </p>
 
       <div className="mt-6">

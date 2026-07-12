@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 import type { Account, Category, Debt, DebtEntry, DebtStatus, RecurringRule, Transaction } from "./types";
 import { createId } from "./id";
 import { seedAccounts, seedCategories } from "./seed";
@@ -28,8 +27,6 @@ interface CashierState {
   transactions: Transaction[];
   debts: Debt[];
   recurringRules: RecurringRule[];
-  hasHydrated: boolean;
-  setHasHydrated: (v: boolean) => void;
   seedIfEmpty: () => void;
 
   // accounts
@@ -72,21 +69,21 @@ interface CashierState {
 
   resetAllData: () => void;
   importData: (data: Partial<Pick<CashierState, "accounts" | "categories" | "transactions" | "debts" | "recurringRules">>) => void;
+  /** Wipe the in-memory store back to empty — used on sign-out so one account's
+   * data never lingers in memory for the next person on the same device. */
+  resetToEmpty: () => void;
 }
 
-export const useCashierStore = create<CashierState>()(
-  persist(
-    (set, get) => ({
-      // Deterministic (empty) on both server and pre-hydration client render, so SSR output
-      // always matches the first client paint. `seedIfEmpty` populates real defaults — with
-      // a random account id — only once hydration has confirmed there's no persisted data.
+export const useCashierStore = create<CashierState>()((set, get) => ({
+      // Starts empty on both server and client (so SSR matches first paint). The
+      // real data is pulled from the cloud after sign-in; a brand-new account is
+      // populated by `seedIfEmpty`. There is no localStorage — the cloud is the
+      // single source of truth.
       accounts: [],
       categories: [],
       transactions: [],
       debts: [],
       recurringRules: [],
-      hasHydrated: false,
-      setHasHydrated: (v) => set({ hasHydrated: v }),
 
       seedIfEmpty: () =>
         set((s) => (s.accounts.length === 0 && s.categories.length === 0 ? { accounts: seedAccounts(), categories: seedCategories() } : s)),
@@ -365,13 +362,6 @@ export const useCashierStore = create<CashierState>()(
           debts: data.debts ?? s.debts,
           recurringRules: data.recurringRules ?? s.recurringRules,
         })),
-    }),
-    {
-      name: "cashier-data",
-      version: 1,
-      onRehydrateStorage: () => (state) => {
-        state?.setHasHydrated(true);
-      },
-    }
-  )
-);
+
+      resetToEmpty: () => set({ accounts: [], categories: [], transactions: [], debts: [], recurringRules: [] }),
+}));

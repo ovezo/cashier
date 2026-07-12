@@ -52,6 +52,18 @@ let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 export function scheduleSync(userId: string): void {
   if (debounceTimer) clearTimeout(debounceTimer);
   debounceTimer = setTimeout(() => {
+    debounceTimer = null;
     void pushToCloud(userId);
-  }, 1500);
+  }, 1000);
+}
+
+/** Cancel any pending debounced push and write immediately. Used before a
+ * pull-on-focus so a just-made local edit is saved before we overwrite the
+ * store with the cloud copy. */
+export async function flushSync(userId: string): Promise<void> {
+  if (debounceTimer) {
+    clearTimeout(debounceTimer);
+    debounceTimer = null;
+    await pushToCloud(userId);
+  }
 }

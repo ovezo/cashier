@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Receipt, PieChart, MoreHorizontal, Plus } from "lucide-react";
+import { useAuthStore } from "@/lib/authStore";
 
 const items = [
   { href: "/", label: "Home", icon: Home },
@@ -15,6 +16,12 @@ const itemsRight = [
 
 export function BottomNav() {
   const pathname = usePathname();
+  const user = useAuthStore((s) => s.user);
+  const dataLoaded = useAuthStore((s) => s.dataLoaded);
+
+  // Hidden on the login screen and until the signed-in user's data is loaded —
+  // so it never shows over the loading splash or the auth screen.
+  if (pathname === "/login" || !user || !dataLoaded) return null;
 
   const renderItem = (item: (typeof items)[number]) => {
     const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);

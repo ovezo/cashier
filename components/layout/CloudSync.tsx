@@ -4,79 +4,113 @@ import { useEffect, useRef } from "react";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { useAuthStore } from "@/lib/authStore";
 import { useCashierStore } from "@/lib/store";
-import { hasAnyData, pullFromCloud, pushToCloud, scheduleSync } from "@/lib/sync";
+import { flushSync, hasAnyData, pullFromCloud, pushToCloud, scheduleSync } from "@/lib/sync";
 
-async function reconcile(userId: string) {
-  const remote = await pullFromCloud(userId);
-  const local = useCashierStore.getState();
-  const localHasData =
-    local.accounts.length > 0 || local.transactions.length > 0 || local.debts.length > 0 || local.recurringRules.length > 0;
-  const remoteHasData = hasAnyData(remote);
-
-  if (remoteHasData && remote && localHasData) {
-    const useCloud = confirm(
-      "You have data both on this device and synced from the cloud. Press OK to use your cloud data (replacing what's on this device), or Cancel to keep this device's data (replacing the cloud copy)."
-    );
-    if (useCloud) {
-      useCashierStore.getState().importData(remote);
-      useCashierStore.getState().generatePending();
-    } else {
-      await pushToCloud(userId);
-    }
-    return;
-  }
-
-  if (remoteHasData && remote) {
-    useCashierStore.getState().importData(remote);
-    useCashierStore.getState().generatePending();
-    return;
-  }
-
-  await pushToCloud(userId);
-}
-
+/**
+ * Owns the whole cloud-as-source-of-truth lifecycle:
+ *  - tracks the Supabase auth session,
+ *  - on sign-in pulls the user's data (seeding a brand-new account),
+ *  - pushes every local change back up (debounced),
+ *  - re-pulls whenever the tab/app regains focus so a second device always
+ *    continues from the same history,
+ *  - clears the in-memory store on sign-out.
+ */
 export function CloudSync() {
   const setUser = useAuthStore((s) => s.setUser);
+  const setAuthResolved = useAuthStore((s) => s.setAuthResolved);
+  const setDataLoaded = useAuthStore((s) => s.setDataLoaded);
   const userId = useAuthStore((s) => s.user?.id);
-  const reconciledFor = useRef<string | null>(null);
 
-  // Track the Supabase auth session.
+  const loadedFor = useRef<string | null>(null);
+  // While we're applying a snapshot pulled from the cloud, suppress the
+  // push-on-change subscription so the pull doesn't immediately echo back up.
+  const applyingRemote = useRef(false);
+
+  // 1. Track the auth session.
   useEffect(() => {
-    if (!isSupabaseConfigured) return;
+    if (!isSupabaseConfigured) {
+      // Misconfigured deploy: resolve as signed-out so the gate can show /login
+      // rather than hanging on the loading screen forever.
+      setAuthResolved(true);
+      return;
+    }
     const supabase = createClient();
-    supabase.auth.getSession().then(({ data: { session } }) => setUser(session?.user ?? null));
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setAuthResolved(true);
+    });
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => setUser(session?.user ?? null));
     return () => subscription.unsubscribe();
-  }, [setUser]);
+  }, [setUser, setAuthResolved]);
 
-  // Reconcile once per sign-in, deferred until the local store has finished hydrating
-  // from localStorage (hydration is async, so "local has no data" can't be trusted yet).
+  // 2. Load (or clear) the store when the signed-in user changes.
   useEffect(() => {
     if (!userId) {
-      reconciledFor.current = null;
+      loadedFor.current = null;
+      useCashierStore.getState().resetToEmpty();
+      setDataLoaded(false);
       return;
     }
-    if (reconciledFor.current === userId) return;
+    if (loadedFor.current === userId) return;
 
-    const tryReconcile = () => {
-      if (reconciledFor.current === userId) return;
-      if (!useCashierStore.getState().hasHydrated) return;
-      reconciledFor.current = userId;
-      void reconcile(userId);
+    let cancelled = false;
+    (async () => {
+      const remote = await pullFromCloud(userId);
+      if (cancelled) return;
+
+      applyingRemote.current = true;
+      if (hasAnyData(remote) && remote) {
+        useCashierStore.getState().importData(remote);
+      } else {
+        // Brand-new account — give them the default wallet + categories.
+        useCashierStore.getState().seedIfEmpty();
+      }
+      useCashierStore.getState().generatePending();
+      applyingRemote.current = false;
+
+      // Persist the seed and/or any freshly generated pending transactions.
+      await pushToCloud(userId);
+      if (cancelled) return;
+
+      loadedFor.current = userId;
+      setDataLoaded(true);
+    })();
+
+    return () => {
+      cancelled = true;
     };
+  }, [userId, setDataLoaded]);
 
-    tryReconcile();
-    return useCashierStore.subscribe(tryReconcile);
-  }, [userId]);
-
-  // While signed in and past the initial reconcile, debounce-push every local change.
+  // 3. Once loaded: push local changes up, and re-pull on focus.
   useEffect(() => {
     if (!userId) return;
-    return useCashierStore.subscribe(() => {
-      if (reconciledFor.current === userId) scheduleSync(userId);
+
+    const unsubscribe = useCashierStore.subscribe(() => {
+      if (loadedFor.current === userId && !applyingRemote.current) scheduleSync(userId);
     });
+
+    const onFocus = async () => {
+      if (document.visibilityState !== "visible") return;
+      if (loadedFor.current !== userId) return;
+      await flushSync(userId); // save any in-flight local edit before overwriting
+      const remote = await pullFromCloud(userId);
+      if (!remote || loadedFor.current !== userId) return;
+      applyingRemote.current = true;
+      useCashierStore.getState().importData(remote);
+      applyingRemote.current = false;
+      // Runs outside the suppress guard so newly-due recurring items sync up.
+      useCashierStore.getState().generatePending();
+    };
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      unsubscribe();
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
   }, [userId]);
 
   return null;
