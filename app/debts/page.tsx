@@ -65,10 +65,11 @@ function DebtsPageContent() {
         {outstandingByCurrency.length === 0 ? (
           <div className={`tabular mt-1 text-[26px] font-bold ${amountTone}`}>{formatAmount(0, primaryCurrency)}</div>
         ) : (
-          <div className="mt-1 flex flex-col gap-0.5">
+          <div className="mt-1 flex flex-col gap-2">
             {outstandingByCurrency.map((c) => (
-              <div key={c.currency} className={`tabular text-[26px] font-bold leading-tight ${amountTone}`}>
-                {formatAmount(c.outstanding, c.currency)}
+              <div key={c.currency}>
+                <div className={`tabular text-[26px] font-bold leading-tight ${amountTone}`}>{formatAmount(c.outstanding, c.currency)}</div>
+                <div className="tabular text-[11px] text-ink-faint">of {formatAmount(c.principal, c.currency)}</div>
               </div>
             ))}
           </div>

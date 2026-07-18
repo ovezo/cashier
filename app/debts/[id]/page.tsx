@@ -32,9 +32,25 @@ export default function DebtDetailPage({ params }: { params: Promise<{ id: strin
   const perCurrency = totalsByCurrency([debt], accounts, primaryCurrency);
   const primaryTotals = debtTotals(debt, accounts);
   const receivedLabel = debt.direction === "owed_to_me" ? "Received" : "Paid";
-  // Only worth showing an "overall in primary" line when it adds information:
-  // multiple currencies, or a single currency that isn't already the primary.
-  const showPrimaryOverall = perCurrency.length > 1 || (perCurrency[0] && perCurrency[0].currency !== primaryCurrency);
+
+  // The overall outstanding (summed across the debt's currencies, in the primary
+  // currency) expressed in each distinct currency the user holds an account in —
+  // primary first. e.g. "≈ $1,525.56 or ₮5,448.43".
+  const overallInEachCurrency: { currency: string; amount: number }[] = [];
+  const seenCurrency = new Set<string>();
+  for (const a of accounts) {
+    if (seenCurrency.has(a.currency)) continue;
+    seenCurrency.add(a.currency);
+    overallInEachCurrency.push({
+      currency: a.currency,
+      amount: a.exchangeRateToPrimary ? primaryTotals.outstanding / a.exchangeRateToPrimary : primaryTotals.outstanding,
+    });
+  }
+  overallInEachCurrency.sort((x, y) => (x.currency === primaryCurrency ? -1 : 0) - (y.currency === primaryCurrency ? -1 : 0));
+  const overallText = overallInEachCurrency.map((c) => formatAmount(c.amount, c.currency)).join(" or ");
+  // Only worth showing when it adds information: the user holds more than one
+  // currency, or this debt isn't already all in the primary currency.
+  const showOverall = seenCurrency.size > 1 || perCurrency.length > 1 || (perCurrency[0] && perCurrency[0].currency !== primaryCurrency);
   const lendLabel = debt.direction === "owed_to_me" ? "Lend more" : "Borrow more";
   const repaymentLabel = debt.direction === "owed_to_me" ? "Record received" : "Record repayment";
 
@@ -75,9 +91,9 @@ export default function DebtDetailPage({ params }: { params: Promise<{ id: strin
             </div>
           </div>
         ))}
-        {showPrimaryOverall && (
+        {showOverall && (
           <p className="mt-3 border-t border-line pt-2.5 text-[11px] leading-relaxed text-ink-faint">
-            Overall ≈ {formatAmount(primaryTotals.outstanding, primaryCurrency)} outstanding · converted to your primary currency ({primaryCurrency}).
+            Overall ≈ {overallText} <span className="text-ink-faint">(in the currencies in your accounts).</span>
           </p>
         )}
       </div>
