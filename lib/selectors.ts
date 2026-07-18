@@ -15,6 +15,33 @@ export function debtTotals(debt: Debt, accounts: Account[]): { principal: number
   return { principal, repaid, outstanding: Math.max(principal - repaid, 0) };
 }
 
+export interface CurrencyTotal {
+  currency: string;
+  principal: number;
+  repaid: number;
+  outstanding: number;
+}
+
+/** Sums lend/repayment entries grouped by their own currency (no conversion), so a debt
+ * held in TMT shows in TMT rather than being folded into the primary currency. Primary
+ * currency is listed first, then by size. */
+export function totalsByCurrency(debts: Debt[], accounts: Account[], primaryCurrency: string): CurrencyTotal[] {
+  const accountById = new Map(accounts.map((a) => [a.id, a]));
+  const byCurrency = new Map<string, { principal: number; repaid: number }>();
+  for (const debt of debts) {
+    for (const e of debt.entries) {
+      const currency = accountById.get(e.accountId)?.currency ?? primaryCurrency;
+      const cur = byCurrency.get(currency) ?? { principal: 0, repaid: 0 };
+      if (e.kind === "lend") cur.principal += e.amount;
+      else cur.repaid += e.amount;
+      byCurrency.set(currency, cur);
+    }
+  }
+  return [...byCurrency.entries()]
+    .map(([currency, v]) => ({ currency, principal: v.principal, repaid: v.repaid, outstanding: Math.max(v.principal - v.repaid, 0) }))
+    .sort((a, b) => (a.currency === primaryCurrency ? -1 : 0) - (b.currency === primaryCurrency ? -1 : 0) || b.outstanding - a.outstanding);
+}
+
 export function accountBalance(account: Account, transactions: Transaction[]): number {
   let balance = account.openingBalance ?? 0;
   for (const t of transactions) {

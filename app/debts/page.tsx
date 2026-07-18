@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useCashierStore } from "@/lib/store";
 import { getPrimaryAccount } from "@/lib/currency";
-import { debtTotals } from "@/lib/selectors";
+import { totalsByCurrency } from "@/lib/selectors";
 import { formatAmount } from "@/lib/format";
 import type { DebtDirection } from "@/lib/types";
 import { Segmented } from "@/components/ui/Segmented";
@@ -28,11 +28,15 @@ function DebtsPageContent() {
   const tab: DebtDirection = searchParams.get("tab") === "i_owe" ? "i_owe" : "owed_to_me";
 
   const primary = getPrimaryAccount(accounts);
+  const primaryCurrency = primary?.currency ?? "";
   const filtered = debts.filter((d) => d.direction === tab).sort((a, b) => (a.status === "paid" ? 1 : 0) - (b.status === "paid" ? 1 : 0));
 
-  const totalOutstandingPrimary = debts
-    .filter((d) => d.direction === tab && d.status !== "paid")
-    .reduce((sum, d) => sum + debtTotals(d, accounts).outstanding, 0);
+  const outstandingByCurrency = totalsByCurrency(
+    debts.filter((d) => d.direction === tab && d.status !== "paid"),
+    accounts,
+    primaryCurrency
+  ).filter((c) => c.outstanding > 0.005);
+  const amountTone = tab === "owed_to_me" ? "text-income" : "text-expense";
 
   return (
     <div className="px-4 pb-8 pt-5">
@@ -58,9 +62,17 @@ function DebtsPageContent() {
         <div className="text-[11px] font-bold uppercase tracking-wide text-ink-faint">
           {tab === "owed_to_me" ? "Total owed to you" : "Total you owe"}
         </div>
-        <div className={`tabular mt-1 text-[26px] font-bold ${tab === "owed_to_me" ? "text-income" : "text-expense"}`}>
-          {formatAmount(totalOutstandingPrimary, primary?.currency ?? "")}
-        </div>
+        {outstandingByCurrency.length === 0 ? (
+          <div className={`tabular mt-1 text-[26px] font-bold ${amountTone}`}>{formatAmount(0, primaryCurrency)}</div>
+        ) : (
+          <div className="mt-1 flex flex-col gap-0.5">
+            {outstandingByCurrency.map((c) => (
+              <div key={c.currency} className={`tabular text-[26px] font-bold leading-tight ${amountTone}`}>
+                {formatAmount(c.outstanding, c.currency)}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="mt-4 flex flex-col gap-2.5">

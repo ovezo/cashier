@@ -4,7 +4,7 @@ import { use } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { useCashierStore } from "@/lib/store";
-import { debtTotals } from "@/lib/selectors";
+import { debtTotals, totalsByCurrency } from "@/lib/selectors";
 import { getPrimaryAccount } from "@/lib/currency";
 import { formatAmount } from "@/lib/format";
 import { frequencyLabel } from "@/lib/recurring";
@@ -28,8 +28,13 @@ export default function DebtDetailPage({ params }: { params: Promise<{ id: strin
 
   if (!debt) return <p className="px-4 py-8 text-sm text-ink-faint">Debt not found.</p>;
 
-  const { principal, repaid, outstanding } = debtTotals(debt, accounts);
   const primaryCurrency = primary?.currency ?? "";
+  const perCurrency = totalsByCurrency([debt], accounts, primaryCurrency);
+  const primaryTotals = debtTotals(debt, accounts);
+  const receivedLabel = debt.direction === "owed_to_me" ? "Received" : "Paid";
+  // Only worth showing an "overall in primary" line when it adds information:
+  // multiple currencies, or a single currency that isn't already the primary.
+  const showPrimaryOverall = perCurrency.length > 1 || (perCurrency[0] && perCurrency[0].currency !== primaryCurrency);
   const lendLabel = debt.direction === "owed_to_me" ? "Lend more" : "Borrow more";
   const repaymentLabel = debt.direction === "owed_to_me" ? "Record received" : "Record repayment";
 
@@ -54,19 +59,27 @@ export default function DebtDetailPage({ params }: { params: Promise<{ id: strin
       </div>
 
       <div className="mt-4 rounded-2xl border border-line bg-card p-3.5">
-        <div className="flex items-center justify-between text-[13px]">
-          <span className="text-ink-faint">Outstanding</span>
-          <span className="tabular text-[17px] font-bold">{formatAmount(outstanding, primaryCurrency)}</span>
-        </div>
-        <div className="mt-1 flex items-center justify-between text-[13px]">
-          <span className="text-ink-faint">Principal</span>
-          <span className="tabular font-semibold">{formatAmount(principal, primaryCurrency)}</span>
-        </div>
-        <div className="mt-1 flex items-center justify-between text-[13px]">
-          <span className="text-ink-faint">{debt.direction === "owed_to_me" ? "Received" : "Paid"} so far</span>
-          <span className="tabular font-semibold text-income">{formatAmount(repaid, primaryCurrency)}</span>
-        </div>
-        <p className="mt-2 text-[10.5px] leading-relaxed text-ink-faint">Shown in your primary currency — entries can each be in a different wallet.</p>
+        {perCurrency.map((c, i) => (
+          <div key={c.currency} className={i > 0 ? "mt-3 border-t border-line pt-3" : ""}>
+            <div className="flex items-center justify-between text-[13px]">
+              <span className="text-ink-faint">Outstanding{perCurrency.length > 1 ? ` · ${c.currency}` : ""}</span>
+              <span className="tabular text-[17px] font-bold">{formatAmount(c.outstanding, c.currency)}</span>
+            </div>
+            <div className="mt-1 flex items-center justify-between text-[13px]">
+              <span className="text-ink-faint">Principal</span>
+              <span className="tabular font-semibold">{formatAmount(c.principal, c.currency)}</span>
+            </div>
+            <div className="mt-1 flex items-center justify-between text-[13px]">
+              <span className="text-ink-faint">{receivedLabel} so far</span>
+              <span className="tabular font-semibold text-income">{formatAmount(c.repaid, c.currency)}</span>
+            </div>
+          </div>
+        ))}
+        {showPrimaryOverall && (
+          <p className="mt-3 border-t border-line pt-2.5 text-[11px] leading-relaxed text-ink-faint">
+            Overall ≈ {formatAmount(primaryTotals.outstanding, primaryCurrency)} outstanding · converted to your primary currency ({primaryCurrency}).
+          </p>
+        )}
       </div>
 
       <div className="mt-4 flex gap-2.5">
