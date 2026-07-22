@@ -17,6 +17,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [checkEmail, setCheckEmail] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
 
   async function submit() {
     setError("");
@@ -51,6 +52,25 @@ export default function LoginPage() {
     router.push("/");
   }
 
+  async function forgotPassword() {
+    setError("");
+    if (!email.trim()) {
+      setError("Enter your email above first, then tap “Forgot password”.");
+      return;
+    }
+    setLoading(true);
+    const supabase = createClient();
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+    });
+    setLoading(false);
+    if (error) {
+      setError(error.message);
+      return;
+    }
+    setResetSent(true);
+  }
+
   async function continueWithGoogle() {
     setError("");
     const supabase = createClient();
@@ -61,13 +81,21 @@ export default function LoginPage() {
     if (error) setError(error.message);
   }
 
-  if (checkEmail) {
+  if (checkEmail || resetSent) {
     return (
       <div className="flex flex-col items-center px-4 pt-16 text-center">
         <div className="font-serif text-lg font-bold">Cashier</div>
         <h1 className="mt-6 font-serif text-xl font-semibold">Check your email</h1>
         <p className="mt-2 text-[13px] leading-relaxed text-ink-faint">
-          We sent a confirmation link to <b className="text-ink">{email}</b>. Open it on this device to finish creating your account.
+          {resetSent ? (
+            <>
+              We sent a password reset link to <b className="text-ink">{email}</b>. Open it on this device to set a new password.
+            </>
+          ) : (
+            <>
+              We sent a confirmation link to <b className="text-ink">{email}</b>. Open it on this device to finish creating your account.
+            </>
+          )}
         </p>
       </div>
     );
@@ -119,6 +147,14 @@ export default function LoginPage() {
           {loading ? "Please wait…" : mode === "signin" ? "Sign in" : "Sign up"}
         </Button>
       </div>
+
+      {mode === "signin" && (
+        <div className="mt-3 text-center">
+          <button onClick={forgotPassword} disabled={loading} className="text-[12.5px] font-semibold text-accent disabled:opacity-40">
+            Forgot password?
+          </button>
+        </div>
+      )}
 
       <div className="mt-5 flex items-center gap-3">
         <div className="h-px flex-1 bg-line" />
