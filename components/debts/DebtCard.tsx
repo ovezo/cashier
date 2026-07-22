@@ -18,12 +18,15 @@ export function DebtCard({ debt, accounts, primaryCurrency, nextDue }: { debt: D
   return (
     <Link href={`/debts/${debt.id}`} className={`block rounded-2xl border border-line bg-card p-3.5 ${isPaid ? "opacity-55" : ""}`}>
       <div className="flex items-start justify-between gap-2">
-        <div className={`text-[14px] font-bold ${isPaid ? "line-through" : ""}`}>{debt.person}</div>
-        <div className="shrink-0 space-y-1 text-right">
-          {perCurrency.map((c) => (
-            <div key={c.currency}>
-              <div className="tabular text-[15px] font-bold leading-tight">{formatAmount(c.outstanding, c.currency)}</div>
-              <div className="tabular text-[10.5px] text-ink-faint">of {formatAmount(c.principal, c.currency)}</div>
+        <div className={`min-w-0 flex-1 truncate text-[14px] font-bold ${isPaid ? "line-through" : ""}`}>{debt.person}</div>
+        <div className="flex shrink-0 items-start gap-2">
+          {perCurrency.map((c, i) => (
+            <div key={c.currency} className="flex items-start gap-2">
+              {i > 0 && <span className="pt-px text-[13px] font-bold text-ink-faint">+</span>}
+              <div className="text-right">
+                <div className="tabular text-[15px] font-bold leading-tight">{formatAmount(c.outstanding, c.currency)}</div>
+                <div className="tabular text-[10.5px] text-ink-faint">of {formatAmount(c.principal, c.currency)}</div>
+              </div>
             </div>
           ))}
         </div>
