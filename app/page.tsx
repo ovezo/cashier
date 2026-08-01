@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCashierStore } from "@/lib/store";
 import { getPrimaryAccount } from "@/lib/currency";
-import { accountBalance, currentMonthBounds, periodTotals, totalBalancePrimary } from "@/lib/selectors";
+import { accountBalance, balancesByCurrency, currentMonthBounds, periodTotals } from "@/lib/selectors";
 import { formatAmount, formatSigned } from "@/lib/format";
 import { TransactionList } from "@/components/transactions/TransactionList";
 
@@ -15,7 +15,8 @@ export default function DashboardPage() {
   const primary = getPrimaryAccount(accounts);
   const { start, end } = currentMonthBounds();
   const { incomePrimary, expensePrimary } = periodTotals(transactions, accounts, start, end);
-  const total = totalBalancePrimary(accounts, transactions);
+  const primaryCurrency = primary?.currency ?? "";
+  const balances = balancesByCurrency(accounts, transactions, primaryCurrency);
   const pending = transactions.filter((t) => t.status === "pending");
   // Take the last 6 *added* (not yet display-sorted) — TransactionList does the newest-first
   // sort itself, so pre-sorting here would double-sort and scramble same-day ordering.
@@ -34,8 +35,20 @@ export default function DashboardPage() {
       </div>
 
       <div className="mt-3.5 rounded-[20px] bg-accent p-5 text-white">
-        <div className="text-[11px] uppercase tracking-wide text-white/65">Total balance · {primary?.currency}</div>
-        <div className="tabular mt-1.5 text-4xl font-semibold">{formatAmount(total, primary?.currency ?? "")}</div>
+        <div className="text-[11px] uppercase tracking-wide text-white/65">
+          Total balance{balances.length === 1 ? ` · ${balances[0].currency}` : ""}
+        </div>
+        {balances.length <= 1 ? (
+          <div className="tabular mt-1.5 text-4xl font-semibold">{formatAmount(balances[0]?.balance ?? 0, primaryCurrency)}</div>
+        ) : (
+          <div className="mt-1.5 flex flex-col gap-1">
+            {balances.map((b) => (
+              <div key={b.currency} className="tabular text-[30px] font-semibold leading-tight">
+                {formatAmount(b.balance, b.currency)}
+              </div>
+            ))}
+          </div>
+        )}
         <div className="mt-4 flex gap-5 border-t border-white/15 pt-3.5 text-[11px] text-white/65">
           <div>
             Income this month

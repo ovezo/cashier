@@ -61,6 +61,22 @@ export function totalBalancePrimary(accounts: Account[], transactions: Transacti
   return accounts.reduce((sum, a) => sum + toPrimary(accountBalance(a, transactions), a), 0);
 }
 
+/** Total balance grouped by currency (accounts of the same currency summed, no conversion),
+ * primary currency first. */
+export function balancesByCurrency(
+  accounts: Account[],
+  transactions: Transaction[],
+  primaryCurrency: string
+): { currency: string; balance: number }[] {
+  const byCurrency = new Map<string, number>();
+  for (const a of accounts) {
+    byCurrency.set(a.currency, (byCurrency.get(a.currency) ?? 0) + accountBalance(a, transactions));
+  }
+  return [...byCurrency.entries()]
+    .map(([currency, balance]) => ({ currency, balance }))
+    .sort((x, y) => (x.currency === primaryCurrency ? -1 : 0) - (y.currency === primaryCurrency ? -1 : 0) || Math.abs(y.balance) - Math.abs(x.balance));
+}
+
 export function periodTotals(
   transactions: Transaction[],
   accounts: Account[],
