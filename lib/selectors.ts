@@ -87,12 +87,35 @@ export function periodTotals(
   let incomePrimary = 0;
   let expensePrimary = 0;
   for (const t of transactions) {
-    if (t.status !== "confirmed" || t.date < from || t.date > to || t.type === "transfer") continue;
+    // Debt-linked movements (lending, borrowing, repayments) are asset/liability
+    // transfers, not spending or earning — they're reported separately.
+    if (t.status !== "confirmed" || t.date < from || t.date > to || t.type === "transfer" || t.linkedDebtId) continue;
     const converted = toPrimary(t.amount, accountById.get(t.accountId));
     if (t.type === "income") incomePrimary += converted;
     else expensePrimary += converted;
   }
   return { incomePrimary, expensePrimary };
+}
+
+/** Money moved for debts in the period, kept out of income/expense: `outflow` is cash that
+ * left your wallets (lending to others + repaying what you owe), `inflow` is cash that came
+ * in (borrowing + repayments received). Expressed in the primary currency. */
+export function debtFlows(
+  transactions: Transaction[],
+  accounts: Account[],
+  from: string,
+  to: string
+): { outflow: number; inflow: number } {
+  const accountById = new Map(accounts.map((a) => [a.id, a]));
+  let outflow = 0;
+  let inflow = 0;
+  for (const t of transactions) {
+    if (t.status !== "confirmed" || t.date < from || t.date > to || t.type === "transfer" || !t.linkedDebtId) continue;
+    const converted = toPrimary(t.amount, accountById.get(t.accountId));
+    if (t.type === "income") inflow += converted;
+    else outflow += converted;
+  }
+  return { outflow, inflow };
 }
 
 export function currentMonthBounds(): { start: string; end: string } {
@@ -124,7 +147,8 @@ export function categoryBreakdown(
   const totals = new Map<string, number>();
   let periodTotal = 0;
   for (const t of transactions) {
-    if (t.status !== "confirmed" || t.type !== type || t.date < from || t.date > to) continue;
+    // Skip debt-linked movements — they aren't spending/earning and carry no category.
+    if (t.status !== "confirmed" || t.type !== type || t.date < from || t.date > to || t.linkedDebtId) continue;
     const converted = toPrimary(t.amount, accountById.get(t.accountId));
     periodTotal += converted;
     for (const categoryId of t.categoryIds ?? []) {

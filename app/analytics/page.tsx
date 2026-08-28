@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import { useCashierStore } from "@/lib/store";
 import { getPrimaryAccount } from "@/lib/currency";
-import { categoryBreakdown, currentMonthBounds, monthBoundsOffset, periodTotals } from "@/lib/selectors";
+import { categoryBreakdown, currentMonthBounds, debtFlows, monthBoundsOffset, periodTotals } from "@/lib/selectors";
 import { formatAmount, todayIso } from "@/lib/format";
 import { Segmented } from "@/components/ui/Segmented";
 import { CategoryDonut } from "@/components/analytics/CategoryDonut";
@@ -32,6 +33,9 @@ export default function AnalyticsPage() {
   const { incomePrimary, expensePrimary } = periodTotals(transactions, accounts, from, to);
   const total = incomePrimary + expensePrimary;
   const incomePct = total > 0 ? (incomePrimary / total) * 100 : 50;
+
+  const { outflow: debtOut, inflow: debtIn } = debtFlows(transactions, accounts, from, to);
+  const hasDebtActivity = debtOut > 0 || debtIn > 0;
 
   const { rows } = categoryBreakdown(transactions, categories, accounts, breakdownType, from, to);
   const topRow = rows[0];
@@ -86,6 +90,30 @@ export default function AnalyticsPage() {
         <div className="h-full bg-income" style={{ width: `${incomePct}%` }} />
         <div className="h-full bg-expense" style={{ width: `${100 - incomePct}%` }} />
       </div>
+
+      {hasDebtActivity && (
+        <>
+          <div className="mt-5 mb-1.5 text-[11px] font-bold uppercase tracking-wide text-ink-faint">
+            Debts · kept out of income &amp; expense
+          </div>
+          <div className="flex gap-2.5">
+            <div className="flex-1 rounded-2xl border border-line bg-card p-3.5">
+              <div className="flex items-center gap-1 text-[10.5px] uppercase tracking-wide text-ink-faint">
+                <ArrowUpRight size={12} /> Out to debts
+              </div>
+              <div className="tabular mt-1 text-[17px] font-bold text-ink">{formatAmount(debtOut, primary?.currency ?? "")}</div>
+              <div className="mt-0.5 text-[10.5px] text-ink-faint">Lent out &amp; repayments you made</div>
+            </div>
+            <div className="flex-1 rounded-2xl border border-line bg-card p-3.5">
+              <div className="flex items-center gap-1 text-[10.5px] uppercase tracking-wide text-ink-faint">
+                <ArrowDownLeft size={12} /> In from debts
+              </div>
+              <div className="tabular mt-1 text-[17px] font-bold text-ink">{formatAmount(debtIn, primary?.currency ?? "")}</div>
+              <div className="mt-0.5 text-[10.5px] text-ink-faint">Borrowed &amp; repayments received</div>
+            </div>
+          </div>
+        </>
+      )}
 
       <div className="mt-5 mb-1.5 text-[11px] font-bold uppercase tracking-wide text-ink-faint">Cash flow · last 6 months</div>
       <div className="rounded-2xl border border-line bg-card p-3.5">
