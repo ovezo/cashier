@@ -7,11 +7,14 @@ import { getPrimaryAccount } from "@/lib/currency";
 import { categoryBreakdown, currentMonthBounds, debtFlows, monthBoundsOffset, periodTotals } from "@/lib/selectors";
 import { formatAmount, todayIso } from "@/lib/format";
 import { Segmented } from "@/components/ui/Segmented";
+import { Sheet } from "@/components/ui/Sheet";
 import { CategoryDonut } from "@/components/analytics/CategoryDonut";
 import { CashFlowBars } from "@/components/analytics/CashFlowBars";
-import type { TxType } from "@/lib/types";
+import { TransactionList } from "@/components/transactions/TransactionList";
+import type { Transaction, TxType } from "@/lib/types";
 
 type RangeOption = "this-month" | "last-month" | "custom";
+type CardKey = "income" | "expense" | "debtOut" | "debtIn";
 
 export default function AnalyticsPage() {
   const transactions = useCashierStore((s) => s.transactions);
@@ -36,6 +39,25 @@ export default function AnalyticsPage() {
 
   const { outflow: debtOut, inflow: debtIn } = debtFlows(transactions, accounts, from, to);
   const hasDebtActivity = debtOut > 0 || debtIn > 0;
+
+  // The transactions behind each summary card, opened in a bottom sheet on tap.
+  const [openCard, setOpenCard] = useState<CardKey | null>(null);
+  const cardTxns = useMemo(() => {
+    const inRange = (t: Transaction) => t.status === "confirmed" && t.type !== "transfer" && t.date >= from && t.date <= to;
+    return {
+      income: transactions.filter((t) => inRange(t) && t.type === "income" && !t.linkedDebtId),
+      expense: transactions.filter((t) => inRange(t) && t.type === "expense" && !t.linkedDebtId),
+      debtOut: transactions.filter((t) => inRange(t) && t.type === "expense" && !!t.linkedDebtId),
+      debtIn: transactions.filter((t) => inRange(t) && t.type === "income" && !!t.linkedDebtId),
+    };
+  }, [transactions, from, to]);
+  const rangeLabel = range === "this-month" ? "This month" : range === "last-month" ? "Last month" : `${from} → ${to}`;
+  const cardMeta: Record<CardKey, { title: string; total: number }> = {
+    income: { title: "Income", total: incomePrimary },
+    expense: { title: "Expense", total: expensePrimary },
+    debtOut: { title: "Out to debts", total: debtOut },
+    debtIn: { title: "In from debts", total: debtIn },
+  };
 
   const { rows } = categoryBreakdown(transactions, categories, accounts, breakdownType, from, to);
   const topRow = rows[0];
@@ -77,14 +99,14 @@ export default function AnalyticsPage() {
       )}
 
       <div className="mt-4 flex gap-2.5">
-        <div className="flex-1 rounded-2xl border border-line bg-card p-3.5">
+        <button onClick={() => setOpenCard("income")} className="flex-1 rounded-2xl border border-line bg-card p-3.5 text-left transition active:opacity-70">
           <div className="text-[10.5px] uppercase tracking-wide text-ink-faint">Income</div>
           <div className="tabular mt-1 text-[17px] font-bold text-income">{formatAmount(incomePrimary, primary?.currency ?? "")}</div>
-        </div>
-        <div className="flex-1 rounded-2xl border border-line bg-card p-3.5">
+        </button>
+        <button onClick={() => setOpenCard("expense")} className="flex-1 rounded-2xl border border-line bg-card p-3.5 text-left transition active:opacity-70">
           <div className="text-[10.5px] uppercase tracking-wide text-ink-faint">Expense</div>
           <div className="tabular mt-1 text-[17px] font-bold text-expense">{formatAmount(expensePrimary, primary?.currency ?? "")}</div>
-        </div>
+        </button>
       </div>
       <div className="mt-2.5 flex h-1.5 overflow-hidden rounded-full bg-paper-deep">
         <div className="h-full bg-income" style={{ width: `${incomePct}%` }} />
@@ -97,20 +119,20 @@ export default function AnalyticsPage() {
             Debts · kept out of income &amp; expense
           </div>
           <div className="flex gap-2.5">
-            <div className="flex-1 rounded-2xl border border-line bg-card p-3.5">
+            <button onClick={() => setOpenCard("debtOut")} className="flex-1 rounded-2xl border border-line bg-card p-3.5 text-left transition active:opacity-70">
               <div className="flex items-center gap-1 text-[10.5px] uppercase tracking-wide text-ink-faint">
                 <ArrowUpRight size={12} /> Out to debts
               </div>
               <div className="tabular mt-1 text-[17px] font-bold text-ink">{formatAmount(debtOut, primary?.currency ?? "")}</div>
               <div className="mt-0.5 text-[10.5px] text-ink-faint">Lent out &amp; repayments you made</div>
-            </div>
-            <div className="flex-1 rounded-2xl border border-line bg-card p-3.5">
+            </button>
+            <button onClick={() => setOpenCard("debtIn")} className="flex-1 rounded-2xl border border-line bg-card p-3.5 text-left transition active:opacity-70">
               <div className="flex items-center gap-1 text-[10.5px] uppercase tracking-wide text-ink-faint">
                 <ArrowDownLeft size={12} /> In from debts
               </div>
               <div className="tabular mt-1 text-[17px] font-bold text-ink">{formatAmount(debtIn, primary?.currency ?? "")}</div>
               <div className="mt-0.5 text-[10.5px] text-ink-faint">Borrowed &amp; repayments received</div>
-            </div>
+            </button>
           </div>
         </>
       )}
@@ -145,6 +167,21 @@ export default function AnalyticsPage() {
           </div>
         )}
       </div>
+
+      <Sheet
+        open={openCard !== null}
+        onClose={() => setOpenCard(null)}
+        title={openCard ? cardMeta[openCard].title : ""}
+        subtitle={
+          openCard ? (
+            <>
+              <span className="tabular font-semibold text-ink">{formatAmount(cardMeta[openCard].total, primary?.currency ?? "")}</span> · {rangeLabel}
+            </>
+          ) : null
+        }
+      >
+        {openCard && <TransactionList transactions={cardTxns[openCard]} emptyLabel="Nothing here for this range." />}
+      </Sheet>
     </div>
   );
 }
