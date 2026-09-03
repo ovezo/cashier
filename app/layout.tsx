@@ -3,6 +3,7 @@ import "./globals.css";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { CloudSync } from "@/components/layout/CloudSync";
 import { AppGate } from "@/components/layout/AppGate";
+import { SaveIndicator } from "@/components/layout/SaveIndicator";
 
 export const metadata: Metadata = {
   title: "Cashier",
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en" className="h-full font-sans antialiased">
       <body className="min-h-full bg-paper-deep">
         <CloudSync />
+        <SaveIndicator />
         <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-paper shadow-[0_0_60px_rgba(0,0,0,0.08)]">
           <div className="flex-1">
             <AppGate>{children}</AppGate>

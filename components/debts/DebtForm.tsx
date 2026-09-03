@@ -4,12 +4,14 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { X } from "lucide-react";
 import { useCashierStore } from "@/lib/store";
+import { useCommit } from "@/lib/useCommit";
 import { sanitizeDecimalInput, todayIso } from "@/lib/format";
 import { frequencyLabel } from "@/lib/recurring";
 import type { DebtDirection, Frequency } from "@/lib/types";
 import { Segmented } from "@/components/ui/Segmented";
 import { Switch } from "@/components/ui/Switch";
 import { Button } from "@/components/ui/Button";
+import { Spinner } from "@/components/ui/Spinner";
 import { Label, SelectInput, TextInput } from "@/components/ui/Field";
 
 const frequencies: Frequency[] = ["daily", "weekly", "biweekly", "monthly", "yearly"];
@@ -21,6 +23,8 @@ export function DebtForm() {
   const addDebt = useCashierStore((s) => s.addDebt);
   const addRecurringRule = useCashierStore((s) => s.addRecurringRule);
   const updateDebt = useCashierStore((s) => s.updateDebt);
+  const { commit, saving } = useCommit();
+  const [error, setError] = useState("");
 
   const [direction, setDirection] = useState<DebtDirection>(searchParams.get("direction") === "i_owe" ? "i_owe" : "owed_to_me");
   const [person, setPerson] = useState("");
@@ -41,29 +45,32 @@ export function DebtForm() {
 
   const verb = direction === "owed_to_me" ? "Lending" : "Borrowing";
 
-  function submit() {
+  async function submit() {
     const principalNum = parseFloat(principal);
     if (!person.trim() || !principalNum || principalNum <= 0 || !resolvedAccountId) return;
+    setError("");
 
-    const debtId = addDebt({ direction, person: person.trim(), amount: principalNum, accountId: resolvedAccountId, date, note: note.trim() });
+    const ok = await commit(() => {
+      const debtId = addDebt({ direction, person: person.trim(), amount: principalNum, accountId: resolvedAccountId, date, note: note.trim() });
+      if (recurring) {
+        const instalmentNum = parseFloat(instalment) || principalNum;
+        const ruleId = addRecurringRule({
+          kind: "debt",
+          frequency,
+          startDate: todayIso(),
+          nextDueDate: todayIso(),
+          amount: instalmentNum,
+          accountId: resolvedAccountId,
+          note: `Instalment · ${person.trim()}`,
+          active: true,
+          linkedDebtId: debtId,
+        });
+        updateDebt(debtId, { recurringId: ruleId });
+      }
+    });
 
-    if (recurring) {
-      const instalmentNum = parseFloat(instalment) || principalNum;
-      const ruleId = addRecurringRule({
-        kind: "debt",
-        frequency,
-        startDate: todayIso(),
-        nextDueDate: todayIso(),
-        amount: instalmentNum,
-        accountId: resolvedAccountId,
-        note: `Instalment · ${person.trim()}`,
-        active: true,
-        linkedDebtId: debtId,
-      });
-      updateDebt(debtId, { recurringId: ruleId });
-    }
-
-    router.push(`/debts?tab=${direction}`);
+    if (ok) router.push(`/debts?tab=${direction}`);
+    else setError("Couldn't save — check your connection and try again.");
   }
 
   return (
@@ -152,8 +159,18 @@ export function DebtForm() {
         </div>
       )}
 
+      {error && <p className="mt-4 text-center text-[12.5px] text-expense">{error}</p>}
+
       <div className="mt-6">
-        <Button onClick={submit}>Add debt</Button>
+        <Button onClick={submit} disabled={saving}>
+          {saving ? (
+            <span className="inline-flex items-center gap-2">
+              <Spinner /> Saving…
+            </span>
+          ) : (
+            "Add debt"
+          )}
+        </Button>
       </div>
     </div>
   );

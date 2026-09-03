@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { useCashierStore } from "@/lib/store";
+import { useCommit } from "@/lib/useCommit";
 import { currencySymbol, sanitizeDecimalInput, todayIso } from "@/lib/format";
 import { frequencyLabel } from "@/lib/recurring";
 import { crossRate } from "@/lib/currency";
@@ -11,6 +12,7 @@ import type { Frequency, Transaction, TransactionType } from "@/lib/types";
 import { Segmented } from "@/components/ui/Segmented";
 import { Switch } from "@/components/ui/Switch";
 import { Button } from "@/components/ui/Button";
+import { Spinner } from "@/components/ui/Spinner";
 import { SelectInput } from "@/components/ui/Field";
 import { CategoryPicker } from "@/components/categories/CategoryPicker";
 
@@ -31,6 +33,8 @@ export function TransactionForm({ existing }: { existing?: Transaction }) {
   const deleteTransaction = useCashierStore((s) => s.deleteTransaction);
   const addRecurringRule = useCashierStore((s) => s.addRecurringRule);
   const generatePending = useCashierStore((s) => s.generatePending);
+  const { commit, saving } = useCommit();
+  const [error, setError] = useState("");
 
   const [type, setType] = useState<TransactionType>(existing?.type ?? "expense");
   const [amount, setAmount] = useState(existing ? String(existing.amount) : "");
@@ -65,6 +69,13 @@ export function TransactionForm({ existing }: { existing?: Transaction }) {
   const rateNum = parseFloat(rate) || 0;
   const receiveAmount = sendAmount * rateNum;
 
+  async function run(mutate: () => void, navigate: () => void) {
+    setError("");
+    const ok = await commit(mutate);
+    if (ok) navigate();
+    else setError("Couldn't save — check your connection and try again.");
+  }
+
   function submit() {
     if (type === "transfer") {
       if (!sendAmount || sendAmount <= 0 || !rateNum || rateNum <= 0 || !resolvedAccountId || !resolvedToAccountId) return;
@@ -79,11 +90,9 @@ export function TransactionForm({ existing }: { existing?: Transaction }) {
         categoryIds: undefined,
       };
       if (existing) {
-        updateTransaction(existing.id, payload);
-        router.back();
+        void run(() => updateTransaction(existing.id, payload), () => router.back());
       } else {
-        addTransaction(payload);
-        router.push("/transactions");
+        void run(() => addTransaction(payload), () => router.push("/transactions"));
       }
       return;
     }
@@ -92,29 +101,35 @@ export function TransactionForm({ existing }: { existing?: Transaction }) {
     if (!numeric || numeric <= 0 || !resolvedAccountId) return;
 
     if (existing) {
-      updateTransaction(existing.id, { type, amount: numeric, accountId: resolvedAccountId, categoryIds: categoryIds.length ? categoryIds : undefined, date, note });
-      router.back();
+      void run(
+        () => updateTransaction(existing.id, { type, amount: numeric, accountId: resolvedAccountId, categoryIds: categoryIds.length ? categoryIds : undefined, date, note }),
+        () => router.back()
+      );
       return;
     }
 
     if (recurring) {
-      addRecurringRule({
-        kind: "transaction",
-        frequency,
-        startDate: date,
-        nextDueDate: date,
-        amount: numeric,
-        accountId: resolvedAccountId,
-        categoryIds: categoryIds.length ? categoryIds : undefined,
-        note,
-        active: true,
-        txType: type,
-      });
-      generatePending();
+      void run(() => {
+        addRecurringRule({
+          kind: "transaction",
+          frequency,
+          startDate: date,
+          nextDueDate: date,
+          amount: numeric,
+          accountId: resolvedAccountId,
+          categoryIds: categoryIds.length ? categoryIds : undefined,
+          note,
+          active: true,
+          txType: type,
+        });
+        generatePending();
+      }, () => router.push("/transactions"));
     } else {
-      addTransaction({ type, amount: numeric, accountId: resolvedAccountId, categoryIds: categoryIds.length ? categoryIds : undefined, date, note });
+      void run(
+        () => addTransaction({ type, amount: numeric, accountId: resolvedAccountId, categoryIds: categoryIds.length ? categoryIds : undefined, date, note }),
+        () => router.push("/transactions")
+      );
     }
-    router.push("/transactions");
   }
 
   const saveLabel = existing ? "Save changes" : type === "transfer" ? "Save transfer" : type === "expense" ? "Save expense" : "Save income";
@@ -279,17 +294,23 @@ export function TransactionForm({ existing }: { existing?: Transaction }) {
         </>
       )}
 
+      {error && <p className="mt-4 text-center text-[12.5px] text-expense">{error}</p>}
+
       <div className="mt-6">
-        <Button onClick={submit} className={saveColorClass}>
-          {saveLabel}
+        <Button onClick={submit} disabled={saving} className={saveColorClass}>
+          {saving ? (
+            <span className="inline-flex items-center gap-2">
+              <Spinner /> Saving…
+            </span>
+          ) : (
+            saveLabel
+          )}
         </Button>
         {existing && (
           <button
-            onClick={() => {
-              deleteTransaction(existing.id);
-              router.push("/transactions");
-            }}
-            className="mt-3 w-full text-center text-[13px] font-semibold text-expense"
+            onClick={() => void run(() => deleteTransaction(existing.id), () => router.push("/transactions"))}
+            disabled={saving}
+            className="mt-3 w-full text-center text-[13px] font-semibold text-expense disabled:opacity-40"
           >
             Delete transaction
           </button>

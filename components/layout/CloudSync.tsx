@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { useAuthStore } from "@/lib/authStore";
+import { useSyncStore } from "@/lib/syncStore";
 import { useCashierStore } from "@/lib/store";
 import { flushSync, hasAnyData, pullFromCloud, pushToCloud, scheduleSync } from "@/lib/sync";
 
@@ -88,8 +89,21 @@ export function CloudSync() {
     if (!userId) return;
 
     const unsubscribe = useCashierStore.subscribe(() => {
-      if (loadedFor.current === userId && !applyingRemote.current) scheduleSync(userId);
+      if (loadedFor.current === userId && !applyingRemote.current) {
+        useSyncStore.getState().update({ dirty: true });
+        scheduleSync(userId);
+      }
     });
+
+    // Warn before a refresh/close while a local change hasn't reached the cloud yet,
+    // so an add made on a slow connection isn't silently lost.
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (useSyncStore.getState().dirty) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
 
     const onFocus = async () => {
       if (document.visibilityState !== "visible") return;
@@ -108,6 +122,7 @@ export function CloudSync() {
     document.addEventListener("visibilitychange", onFocus);
     return () => {
       unsubscribe();
+      window.removeEventListener("beforeunload", onBeforeUnload);
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onFocus);
     };

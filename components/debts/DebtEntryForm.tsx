@@ -4,10 +4,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { useCashierStore } from "@/lib/store";
+import { useCommit } from "@/lib/useCommit";
 import { getPrimaryAccount } from "@/lib/currency";
 import { sanitizeDecimalInput, todayIso } from "@/lib/format";
 import type { DebtEntry, DebtEntryKind } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
+import { Spinner } from "@/components/ui/Spinner";
 import { Label, SelectInput, TextInput } from "@/components/ui/Field";
 
 export function DebtEntryForm({ debtId, kind, existing }: { debtId: string; kind?: DebtEntryKind; existing?: DebtEntry }) {
@@ -16,6 +18,8 @@ export function DebtEntryForm({ debtId, kind, existing }: { debtId: string; kind
   const accounts = useCashierStore((s) => s.accounts);
   const addDebtEntry = useCashierStore((s) => s.addDebtEntry);
   const updateDebtEntry = useCashierStore((s) => s.updateDebtEntry);
+  const { commit, saving } = useCommit();
+  const [error, setError] = useState("");
 
   const entryKind = existing?.kind ?? kind ?? "repayment";
   const [amount, setAmount] = useState(existing ? String(existing.amount) : "");
@@ -39,15 +43,19 @@ export function DebtEntryForm({ debtId, kind, existing }: { debtId: string; kind
         ? "Record received"
         : "Record repayment";
 
-  function submit() {
+  async function submit() {
     const num = parseFloat(amount);
     if (!num || num <= 0 || !resolvedAccountId) return;
-    if (existing) {
-      updateDebtEntry(debtId, existing.id, { amount: num, accountId: resolvedAccountId, date, note: note.trim() });
-    } else {
-      addDebtEntry(debtId, { kind: entryKind, amount: num, accountId: resolvedAccountId, date, note: note.trim() });
-    }
-    router.back();
+    setError("");
+    const ok = await commit(() => {
+      if (existing) {
+        updateDebtEntry(debtId, existing.id, { amount: num, accountId: resolvedAccountId, date, note: note.trim() });
+      } else {
+        addDebtEntry(debtId, { kind: entryKind, amount: num, accountId: resolvedAccountId, date, note: note.trim() });
+      }
+    });
+    if (ok) router.back();
+    else setError("Couldn't save — check your connection and try again.");
   }
 
   return (
@@ -91,8 +99,20 @@ export function DebtEntryForm({ debtId, kind, existing }: { debtId: string; kind
         <TextInput value={note} onChange={(e) => setNote(e.target.value)} placeholder="Note (optional)" />
       </div>
 
+      {error && <p className="mt-4 text-center text-[12.5px] text-expense">{error}</p>}
+
       <div className="mt-6">
-        <Button onClick={submit}>{existing ? "Save changes" : title}</Button>
+        <Button onClick={submit} disabled={saving}>
+          {saving ? (
+            <span className="inline-flex items-center gap-2">
+              <Spinner /> Saving…
+            </span>
+          ) : existing ? (
+            "Save changes"
+          ) : (
+            title
+          )}
+        </Button>
       </div>
     </div>
   );
