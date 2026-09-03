@@ -1,5 +1,6 @@
 import type { Account, Debt, Transaction } from "./types";
 import { toPrimary } from "./currency";
+import { toDateIso } from "./format";
 
 /** A debt's entries can each be in a different currency (different wallet chosen each time),
  * so principal/repaid/outstanding are always expressed in the primary currency. */
@@ -122,14 +123,14 @@ export function currentMonthBounds(): { start: string; end: string } {
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth(), 1);
   const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  return { start: start.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10) };
+  return { start: toDateIso(start), end: toDateIso(end) };
 }
 
 export function monthBoundsOffset(offset: number): { start: string; end: string } {
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth() + offset, 1);
   const end = new Date(now.getFullYear(), now.getMonth() + offset + 1, 0);
-  return { start: start.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10) };
+  return { start: toDateIso(start), end: toDateIso(end) };
 }
 
 /** A transaction can carry more than one category tag (e.g. "Groceries" + "Work"), so it's

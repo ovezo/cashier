@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import { useCashierStore } from "@/lib/store";
 import { Button } from "@/components/ui/Button";
+import { todayIso } from "@/lib/format";
 
 export default function SettingsPage() {
   const categories = useCashierStore((s) => s.categories);
@@ -21,7 +22,7 @@ export default function SettingsPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `cashier-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `cashier-backup-${todayIso()}.json`;
     a.click();
     URL.revokeObjectURL(url);
   }

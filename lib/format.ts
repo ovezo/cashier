@@ -46,8 +46,18 @@ export function formatDateShort(iso: string): string {
   return d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
 }
 
+/** Format a Date as yyyy-MM-dd in the LOCAL timezone. Using toISOString() here would
+ * convert to UTC first and shift the date back a day near midnight in positive-offset
+ * timezones (e.g. UTC+5), which pushed transactions and month boundaries into the wrong day. */
+export function toDateIso(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 export function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
+  return toDateIso(new Date());
 }
 
 /**
@@ -64,7 +74,7 @@ export function sanitizeDecimalInput(raw: string): string {
 
 export function relativeDayLabel(iso: string): string {
   const today = todayIso();
-  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  const yesterday = toDateIso(new Date(Date.now() - 86400000));
   if (iso === today) return "Today";
   if (iso === yesterday) return "Yesterday";
   return formatDate(iso);

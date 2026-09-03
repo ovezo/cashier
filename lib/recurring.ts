@@ -1,5 +1,6 @@
 import { addDays, addMonths, addWeeks, addYears, isAfter } from "date-fns";
 import type { Frequency } from "./types";
+import { toDateIso } from "./format";
 
 export function advanceDate(dateIso: string, frequency: Frequency): string {
   const d = new Date(dateIso + "T00:00:00");
@@ -21,7 +22,7 @@ export function advanceDate(dateIso: string, frequency: Frequency): string {
       next = addYears(d, 1);
       break;
   }
-  return next.toISOString().slice(0, 10);
+  return toDateIso(next);
 }
 
 /**
