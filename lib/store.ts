@@ -280,7 +280,14 @@ export const useCashierStore = create<CashierState>()((set, get) => ({
         }));
       },
 
-      deleteDebt: (id) => set((s) => ({ debts: s.debts.filter((d) => d.id !== id) })),
+      deleteDebt: (id) =>
+        set((s) => ({
+          debts: s.debts.filter((d) => d.id !== id),
+          // Remove the debt's linked wallet transactions and any recurring instalment
+          // rule (and its pending instances) so nothing is left orphaned.
+          transactions: s.transactions.filter((t) => t.linkedDebtId !== id),
+          recurringRules: s.recurringRules.filter((r) => r.linkedDebtId !== id),
+        })),
 
       addRecurringRule: (input) => {
         const id = createId();

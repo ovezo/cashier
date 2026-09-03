@@ -308,7 +308,11 @@ export function TransactionForm({ existing }: { existing?: Transaction }) {
         </Button>
         {existing && (
           <button
-            onClick={() => void run(() => deleteTransaction(existing.id), () => router.push("/transactions"))}
+            onClick={() => {
+              if (confirm("Delete this transaction? This can't be undone.")) {
+                void run(() => deleteTransaction(existing.id), () => router.push("/transactions"));
+              }
+            }}
             disabled={saving}
             className="mt-3 w-full text-center text-[13px] font-semibold text-expense disabled:opacity-40"
           >

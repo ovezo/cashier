@@ -32,12 +32,25 @@ export default function SettingsPage() {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
+      let data: unknown;
       try {
-        const data = JSON.parse(String(reader.result));
-        importData(data);
-        alert("Backup imported.");
+        data = JSON.parse(String(reader.result));
       } catch {
+        alert("That file isn't valid JSON — it doesn't look like a Cashier backup.");
+        return;
+      }
+      // Only accept an object whose known keys (when present) are arrays, so a
+      // malformed file can't corrupt the store (and get synced to the cloud).
+      const keys = ["accounts", "categories", "transactions", "debts", "recurringRules"] as const;
+      const obj = data as Record<string, unknown> | null;
+      const present = obj && typeof obj === "object" ? keys.filter((k) => k in obj) : [];
+      if (present.length === 0 || !present.every((k) => Array.isArray(obj![k]))) {
         alert("That file doesn't look like a valid Cashier backup.");
+        return;
+      }
+      if (confirm("Importing replaces all your current data with this backup. This can't be undone. Continue?")) {
+        importData(obj as Parameters<typeof importData>[0]);
+        alert("Backup imported.");
       }
     };
     reader.readAsText(file);
@@ -45,7 +58,7 @@ export default function SettingsPage() {
   }
 
   function onReset() {
-    if (confirm("This clears all local data (transactions, debts, accounts, categories). This can't be undone. Continue?")) {
+    if (confirm("This permanently clears all your data — transactions, debts, accounts and categories — on every device (it's synced to your account). This can't be undone. Continue?")) {
       resetAllData();
     }
   }
@@ -54,7 +67,7 @@ export default function SettingsPage() {
     <div className="px-4 pb-8 pt-5">
       <h1 className="font-serif text-xl font-semibold">Data & Backups</h1>
       <p className="mt-1.5 text-[12.5px] leading-relaxed text-ink-faint">
-        Everything lives only in this browser&apos;s local storage — nothing is uploaded anywhere. Export a backup regularly so you don&apos;t lose data if you clear your browser.
+        Your data is synced to your account and shared across your devices. Export a backup any time to keep your own offline copy (.json).
       </p>
       <div className="mt-4 flex flex-col gap-2.5">
         <Button variant="outline" onClick={exportData}>

@@ -17,6 +17,15 @@ export function AccountForm({ existing }: { existing?: Account }) {
   const deleteAccount = useCashierStore((s) => s.deleteAccount);
   const setPrimaryAccount = useCashierStore((s) => s.setPrimaryAccount);
   const accounts = useCashierStore((s) => s.accounts);
+  const transactions = useCashierStore((s) => s.transactions);
+  const debts = useCashierStore((s) => s.debts);
+
+  // How many transactions / debt entries still reference this wallet. Deleting a
+  // wallet that's in use would orphan them (blank rows, wrong currency totals).
+  const usageCount = existing
+    ? transactions.filter((t) => t.accountId === existing.id || t.toAccountId === existing.id).length +
+      debts.reduce((n, d) => n + d.entries.filter((e) => e.accountId === existing.id).length, 0)
+    : 0;
 
   const [name, setName] = useState(existing?.name ?? "");
   const [currency, setCurrency] = useState(existing?.currency ?? "USD");
@@ -106,8 +115,22 @@ export function AccountForm({ existing }: { existing?: Account }) {
           )}
           <button
             onClick={() => {
-              deleteAccount(existing.id);
-              router.push("/accounts");
+              if (usageCount > 0) {
+                alert(
+                  `This wallet is used by ${usageCount} transaction${usageCount === 1 ? "" : "s"} / debt ${
+                    usageCount === 1 ? "entry" : "entries"
+                  }. Delete or move those first so their amounts aren't orphaned.`
+                );
+                return;
+              }
+              if (accounts.length === 1) {
+                alert("This is your only wallet — add another before deleting this one.");
+                return;
+              }
+              if (confirm(`Delete "${existing.name}"? This can't be undone.`)) {
+                deleteAccount(existing.id);
+                router.push("/accounts");
+              }
             }}
             className="w-full text-center text-[13px] font-semibold text-expense"
           >

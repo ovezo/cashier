@@ -5,7 +5,7 @@ import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { useAuthStore } from "@/lib/authStore";
 import { useSyncStore } from "@/lib/syncStore";
 import { useCashierStore } from "@/lib/store";
-import { flushSync, hasAnyData, pullFromCloud, pushToCloud, scheduleSync } from "@/lib/sync";
+import { hasAnyData, pullFromCloud, pushToCloud, saveNow, scheduleSync } from "@/lib/sync";
 
 /**
  * Owns the whole cloud-as-source-of-truth lifecycle:
@@ -20,7 +20,9 @@ export function CloudSync() {
   const setUser = useAuthStore((s) => s.setUser);
   const setAuthResolved = useAuthStore((s) => s.setAuthResolved);
   const setDataLoaded = useAuthStore((s) => s.setDataLoaded);
+  const setLoadError = useAuthStore((s) => s.setLoadError);
   const userId = useAuthStore((s) => s.user?.id);
+  const reloadNonce = useAuthStore((s) => s.reloadNonce);
 
   const loadedFor = useRef<string | null>(null);
   // While we're applying a snapshot pulled from the cloud, suppress the
@@ -36,10 +38,11 @@ export function CloudSync() {
       return;
     }
     const supabase = createClient();
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setAuthResolved(true);
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => setUser(session?.user ?? null))
+      .catch((e) => console.error("getSession failed", e))
+      .finally(() => setAuthResolved(true));
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => setUser(session?.user ?? null));
@@ -52,20 +55,29 @@ export function CloudSync() {
       loadedFor.current = null;
       useCashierStore.getState().resetToEmpty();
       setDataLoaded(false);
+      setLoadError(false);
       return;
     }
     if (loadedFor.current === userId) return;
 
     let cancelled = false;
     (async () => {
-      const remote = await pullFromCloud(userId);
+      const result = await pullFromCloud(userId);
       if (cancelled) return;
+
+      // Crucial: a failed pull is NOT an empty account. Never seed/overwrite here —
+      // that would replace real cloud data with a fresh seed. Show a retry instead.
+      if (!result.ok) {
+        setLoadError(true);
+        return;
+      }
+      const remote = result.data;
 
       applyingRemote.current = true;
       if (hasAnyData(remote) && remote) {
         useCashierStore.getState().importData(remote);
       } else {
-        // Brand-new account — give them the default wallet + categories.
+        // Genuinely new account (no row yet) — give them the default wallet + categories.
         useCashierStore.getState().seedIfEmpty();
       }
       useCashierStore.getState().generatePending();
@@ -76,13 +88,14 @@ export function CloudSync() {
       if (cancelled) return;
 
       loadedFor.current = userId;
+      setLoadError(false);
       setDataLoaded(true);
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [userId, setDataLoaded]);
+  }, [userId, reloadNonce, setDataLoaded, setLoadError]);
 
   // 3. Once loaded: push local changes up, and re-pull on focus.
   useEffect(() => {
@@ -108,11 +121,16 @@ export function CloudSync() {
     const onFocus = async () => {
       if (document.visibilityState !== "visible") return;
       if (loadedFor.current !== userId) return;
-      await flushSync(userId); // save any in-flight local edit before overwriting
-      const remote = await pullFromCloud(userId);
-      if (!remote || loadedFor.current !== userId) return;
+      // If there are unsaved local changes, save them first and DON'T pull if that
+      // fails — otherwise the cloud copy would clobber changes that never got saved.
+      if (useSyncStore.getState().dirty) {
+        const saved = await saveNow(userId);
+        if (!saved) return;
+      }
+      const result = await pullFromCloud(userId);
+      if (!result.ok || !result.data || loadedFor.current !== userId) return;
       applyingRemote.current = true;
-      useCashierStore.getState().importData(remote);
+      useCashierStore.getState().importData(result.data);
       applyingRemote.current = false;
       // Runs outside the suppress guard so newly-due recurring items sync up.
       useCashierStore.getState().generatePending();

@@ -123,8 +123,10 @@ export default function DebtDetailPage({ params }: { params: Promise<{ id: strin
 
       <button
         onClick={() => {
-          deleteDebt(debt.id);
-          router.push(`/debts?tab=${debt.direction}`);
+          if (confirm(`Delete this debt with ${debt.person} and all its history? This also removes the linked transactions and can't be undone.`)) {
+            deleteDebt(debt.id);
+            router.push(`/debts?tab=${debt.direction}`);
+          }
         }}
         className="mt-6 w-full text-center text-[13px] font-semibold text-expense"
       >

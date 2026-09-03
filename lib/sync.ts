@@ -21,14 +21,24 @@ export function hasAnyData(data: SyncPayload | null | undefined): boolean {
   );
 }
 
-export async function pullFromCloud(userId: string): Promise<SyncPayload | null> {
+/** `{ ok: true, data }` where `data` is the stored payload or `null` for a genuinely
+ * empty account (no row yet). `{ ok: false }` means the request failed — the caller
+ * MUST NOT treat that as "no data" and overwrite the cloud with a fresh seed. */
+export type PullResult = { ok: true; data: SyncPayload | null } | { ok: false };
+
+export async function pullFromCloud(userId: string): Promise<PullResult> {
   const supabase = createClient();
-  const { data, error } = await supabase.from("user_data").select("data").eq("user_id", userId).maybeSingle();
-  if (error) {
-    console.error("pullFromCloud failed", error);
-    return null;
+  let lastError: unknown = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { data, error } = await supabase.from("user_data").select("data").eq("user_id", userId).maybeSingle();
+    if (!error) {
+      return { ok: true, data: (data?.data as SyncPayload | undefined) ?? null };
+    }
+    lastError = error;
+    if (attempt < 2) await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
   }
-  return (data?.data as SyncPayload | undefined) ?? null;
+  console.error("pullFromCloud failed", lastError);
+  return { ok: false };
 }
 
 /** Pushes the whole store to the cloud, retrying a couple of times on transient
@@ -83,13 +93,4 @@ export async function saveNow(userId: string): Promise<boolean> {
     debounceTimer = null;
   }
   return pushToCloud(userId);
-}
-
-/** Flush only if a debounced push is still pending (nothing to do otherwise). */
-export async function flushSync(userId: string): Promise<void> {
-  if (debounceTimer) {
-    clearTimeout(debounceTimer);
-    debounceTimer = null;
-    await pushToCloud(userId);
-  }
 }
